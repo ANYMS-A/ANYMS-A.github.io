@@ -22,5 +22,5 @@ This project is distributed under the [MIT License](http://choosealicense.com/li
 
 ### Develop Based on Lagrange
 
-This github-page is developed based on [Lagrange](https://github.com/LeNPaul/Lagrange)
+This github-page is developed based on [Lagrange](https://github.com/LeNPaul/Lagrange).
 
