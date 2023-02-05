@@ -1,19 +1,26 @@
 ---
 layout: page
-title: Welcome to Lagrange!
+title: Welcome to Algorithmic!
 permalink: /about
 ---
 
-Lagrange is a minimalist Jekyll theme. The purpose of this theme is to provide a simple, clean, content-focused blogging platform for your personal site or blog. Below you can find everything you need to get started.
+Algorithmic is a place where I share my technical notes at.
 
-### Getting Started
+Hope you can find something you're interested in my blog.
 
-[Getting Started]({{ site.github.url }}{% post_url 2015-10-10-getting-started %}): getting started with installing Lagrange, whether you are completely new to using Jekyll, or simply just migrating to a new Jekyll theme.
+### About the author
 
-### Example Content
+[Hi I'm Allan!]({{ site.github.url }}{% post_url 2023-01-01-about-the-author %})
 
-[Text and Formatting]({{ site.github.url }}{% post_url 2014-01-01-text-formatting-examples %})
+### Blogs
 
-### Questions?
+[Click here to see all blogs](/blogs.html)
 
-This theme is completely free and open source software. You may use it however you want, as it is distributed under the [MIT License](http://choosealicense.com/licenses/mit/). If you are having any problems, any questions or suggestions, feel free to [tweet at me](https://twitter.com/intent/tweet?text=My%question%about%Lagrange%is:%&amp;via=paululele), or [file a GitHub issue](https://github.com/lenpaul/lagrange/issues/new).
+### License
+
+This project is distributed under the [MIT License](http://choosealicense.com/licenses/mit/).
+
+### Develop Based on Lagrange
+
+This github-page is developed based on [Lagrange](https://github.com/LeNPaul/Lagrange)
+
