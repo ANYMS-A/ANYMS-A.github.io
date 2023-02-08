@@ -19,6 +19,7 @@ cpu中较多的晶体管用于数据缓存和流程控制, 只拥有几个少数
 
 
 ![cpu arch](/assets/img/2023-02-05-cuda-camp-day1/cpu_arch.png)
+<div style="text-align: center;">课件截图</div>
 
 ## 单核（少核）处理器发展的物理约束
 
@@ -43,6 +44,8 @@ P 为功耗， V是电压，C是和制程有关的一个常数项，f是时钟�
 
 
 ![cuda_core_arch](/assets/img/2023-02-05-cuda-camp-day1/cuda_core_arch.png)
+<div style="text-align: center;">课件截图</div>
+
 - 图中的深浅黄色叠加的小方块，表示的是一个SIMD function unit。（Single Instruction Multiple Data，单指令多数据流，能够复制多个操作数，并把它们打包在大型寄存器的一组指令集。
   ）。Control shared across 16 units(1 MUL-ADD per clock)
   
@@ -53,12 +56,19 @@ P 为功耗， V是电压，C是和制程有关的一个常数项，f是时钟�
 - Up to 1536 individual contexts can be stored。
 
 ![cuda_core_arch_detail](/assets/img/2023-02-05-cuda-camp-day1/cuda_core_arch_detail.png)
+<div style="text-align: center;">课件截图</div>
 
-SM: Stream Multi-Processor
+SM: Stream Multi-Processor。SM的核心组件包括多个cuda core, 共享的内存，一些寄存器等。SM可以并发执行数百个线程，
+并发能力取决于SM中包含的cuda core（也就是streaming processor）的数量。
+Fermi架构GF100是32个，GF10x是48个。Kepler架构都是192个，Maxwell都是128个。
+kernel启动后，threads会被分配到多个SM中执行，，但是同一个block中的threads必然在同一个SM中并行（逻辑层面）执行。
 
 Warp: 32 CUDA Cores。 一个Warp代表了在物理层面，一起同时执行同一个指令的核心们。（虽然逻辑层面我们认为所有thread是并行执行的，但是其实只有一个Warp中的threads在物理层面算是同时执行）
 一个warp包含32个并行thread，这32个thread执行于SMIT模式。也就是说所有thread执行同一条指令，
 并且每个thread会使用各自的data执行该指令。
+
+warp是调度和运行的基本单元。一个warp需要占用一个SM运行，多个warps需要轮流进入一个SM, 由SM硬件层面的warp scheduler
+负责调度。
 
 **冷知识**：市面上买来的显卡，体积和质量大部分是在风扇和对应的电机，处理器芯片本身的质量是较小的。
 
@@ -106,9 +116,11 @@ CUDA安装后，有很多的sample示例在起安装的文件夹下，可以自�
 下图是一个在jetson nano上运行cuda示例程序的一个截图，该程序是用来查看设备各项特性的。
 
 ![](/assets/img/2023-02-05-cuda-camp-day1/cuda_example_jetson.png)
+<div style="text-align: center;">截图</div>
 
 下图是一个在作者装有2060显卡上运行同样的示例程序的截图:
 ![](/assets/img/2023-02-05-cuda-camp-day1/cuda_example_2060.png)
+<div style="text-align: center;">截图</div>
 
 对比之下，是能看出两种设备的资源差异的。
 
@@ -119,6 +131,7 @@ CUDA安装后，有很多的sample示例在起安装的文件夹下，可以自�
 编程模式：Extended C
 
 ![CUDA Program](/assets/img/2023-02-05-cuda-camp-day1/cuda_program.png)
+<div style="text-align: center;">课件截图</div>
 
 1. 数据从内存复制到显存。
 2. 数据从显存缓存到处理器上，加载GPU程序，执行程序，将结果保存在显存。
@@ -187,14 +200,21 @@ symbol
 
 ```
 
+## 撰写Makefile需要注意的点
+
+如果有文件名和make的指令重名，只需要再撰写makefile的时候（例如课上演示的存在一个名为clean的文件）,
+需为重名的指令加上`.PHONY: xxx` 例如（`.PHONY: clean`）即可。
+
 ## CUDA程序的编译
 
 ![](/assets/img/2023-02-05-cuda-camp-day1/cuda_compile_pipe.png)
+<div style="text-align: center;">课件截图</div>
 
 不同型号的GPU对应了不同类型的架构，因此也对应了不同的编译参数:
 关键点：--gpu-architecture参数需要 **小于** --gpu-code
 
 ![](/assets/img/2023-02-05-cuda-camp-day1/nvcc_example.png)
+<div style="text-align: center;">课件截图</div>
 
 关于如何确定自己机器上GPU的architecture, 建议直接搜显卡的型号查看。也有人建议可以使用 cuda device prop查询，但是作者目前为止还没有完全搞明白具体的做法。
 
@@ -211,7 +231,16 @@ nvcc的一些参数，可以通过`nvcc --help` 来查看:
           --compile'
   ```
 
-**疑惑点**： 课程中提及的 真实架构 和 虚拟架构 的概念没有搞明白。
+**疑惑点**： 课程中提及的 真实架构 和 虚拟架构 的概念：
+
+按照 助教 的解释是， CUDA的GPU代码编译分为两个部分，第一步生成虚拟机指令（中间代码），
+第二步再从虚拟机指令生成实际GPU上可以运行的二进制代码。`--arch=compute_53`指定了虚拟机，`--code=sm_53`指定了实际的机器（Jetson Nano）。
+
+为什么要分为两步:
+ - 中间代码可以兼容多种实际机器的代码。 
+ - 中间代码是伪汇编代码，PTX可以用来确定代码中可以使用的cuda功能，PTX到cubin的编译用来指定真实的架构。
+ - 中间表示与硬件无关，可以进行编译优化，增加一套新的硬件，便只需要增加后端。（类似llvm的前后端分离的思想）
+ - 上图中的cicc就是一个llvm的优化器，生成PTX。
 
 ## NVPROF
 
@@ -225,3 +254,330 @@ Kernel timeline输出的是以GPU kernel为单位的一段时间的运行时间�
 
 关于nvprof的参数，同样也可以通过 `nvprof --help进行查看`
 
+
+## 线程层次
+
+![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch.png)
+<div style="text-align: center;">课件截图</div>
+
+![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch1.png)
+<div style="text-align: center;">课件截图</div>
+
+核函数调用时的会需要指定每个grid中block的数量，以及每个block中thread的数量:
+```c++
+HelloFromGPU<<<num_blocks_in_one_grid, num_threads_in_one_block>>>
+```
+
+执行时，所有申请的线程，都会执行相同的核函数。
+![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch2.png)
+<div style="text-align: center;">课件截图</div>
+
+
+一个硬件层面的cuda core不仅仅只执行一个thread。当一个thread执行完，如果有其他的thread在等待，那么会执行新的thread。
+
+例如一个jetson Nano只有128个核心，但是可执行的线程数量远大于128个。
+
+一个SM不仅仅执行一个block，但是一个block中的thread一定在同一个SM中。
+如何能让SM中驻留更多的活跃的block也是cuda程序优化的目标之一。
+![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch3.png)
+<div style="text-align: center;">课件截图</div>
+
+![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch4.png)
+<div style="text-align: center;">课件截图</div>
+
+## 为什么需要分block和thread层级。
+![why_need_block_threads](/assets/img/2023-02-05-cuda-camp-day1/why_need_block_and_thread.png)
+<div style="text-align: center;">课件截图</div>
+和GPU的architecture有关。
+
+- 避免产生全局的同步等待
+- 避免产生全局的数据共享（因为可能并没有必要）
+
+## 如何确定线程执行的数据
+
+![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/cuda_execute_pipeline.png)
+<div style="text-align: center;">课件截图</div>
+
+单个方向上的例子：
+
+![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/define_data_index.png)
+<div style="text-align: center;">课件截图</div>
+
+## CUDA的内存分配
+![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/cuda_memory_assign.png)
+<div style="text-align: center;">课件截图</div>
+
+```c++
+int N = 100;
+size_t size = N * sizeof(int);
+int *h_a;
+int *d_a;
+
+cudaMalloc((void **)&d_a, size);
+
+cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
+```
+
+提问，为什么`cudaMalloc`传入的参数类型需要为(void **)?
+答：C的编程范式，就和修改 变量值 需要传入 指针 一个道理。
+现在我们要修改指针`d_a`的值（将它修改为GPU上申请到的显存的首地址），
+因此需要传入`d_a`的指针。
+
+
+## 如何合理设置grid_size和block_size?
+
+没有一个标准答案
+
+```c++
+
+block_size = 128;
+grid_size = (N + block_size - 1) / block_size;
+
+```
+
+## 每个block可以申请多少线程
+
+每个block的总线程数量，上限为1024。在cuda的例子中可以看到：
+
+`Maximum numner of threads oer block: 1024`
+
+换言之，block的dimension的size（x, y, z）虽然最大的dim各为（1024， 1024， 64）但是x,y,z的乘积不能超过1024。
+
+## 每个block应该申请多少线程
+
+因为最小的线程数量调度的单位是一个warp也就是32个。因此一个block中的线程个数，尽量为32的倍数。
+
+![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/how_many_threads_should_in_a_warp.png)
+<div style="text-align: center;">课件截图</div>
+
+## 如果数据过大，线程不够用怎么办
+
+![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/what_if_too_many_data.png)
+<div style="text-align: center;">课件截图</div>
+
+例如我只能有8个thread，却要处理长度为32的数组。
+
+方法：在核函数里面加一个loop
+
+代码示例：
+
+```c++
+__global__ void add(const double *x, const double *y, const double *z, int n)
+{
+    int index = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    
+    for(; index < n; index += stride)
+    {
+        z[index] = x[index] + y[index];
+    }
+}
+```
+
+## 代码练习
+
+### 1. blockIdx和threadIdx
+index_of_thread.cu: 
+```c++
+#include <stdio.h>
+
+__global__ void hello_from_gpu()
+
+{
+    const int bid = blockIdx.x;
+    const int tid = theadIdx.x;
+    printf("Hello from block %d and thread %d !/n", bid, tid);
+}
+
+
+int main()
+{
+    int grid_size = 5;
+    int block_size = 65;
+    
+    hello_from_gpu<<<grid_size, block_size>>>();
+    cudaDeviceSynchronize();
+    return 0;
+    
+}
+
+```
+
+通过不同的grid_size和block_size的调整，可观察到：
+- 硬件层面是以warp为单位来对线程进行调用的。
+- warp中的线程虽说硬件层面是同时执行，但是0-31号线程的顺序是递增的。这是因为printf的关系。
+- block的执行顺序是无固定循序的，因此blockIdx打印的顺序无规律。
+
+### 2. 两向量相加
+
+vec_add.cu
+```c++
+void __global__ add(const double *x, const double *y, double *z, int count)
+{
+    const int n = blockDim.x * blockIdx.x + threadIdx.x;
+	if( n < count)
+	{
+	    z[n] = x[n] + y[n];
+	}
+
+}
+
+int main(void)
+{
+    // 申请内存
+    const int N = 1000;
+    const int M = sizeof(double) * N;
+    double *h_x = (double*) malloc(M);
+    double *h_y = (double*) malloc(M);
+    double *h_z = (double*) malloc(M);
+       
+    // 初始化
+    for (int n = 0; n < N; ++n)
+    {
+        h_x[n] = 1;
+        h_y[n] = 2;
+    }
+    
+    // 申请显存
+    double *d_x, *d_y, *d_z;
+    cudaMalloc((void **)&d_x, M);
+    cudaMalloc((void **)&d_y, M);
+    cudaMalloc((void **)&d_z, M);
+    
+    // 拷贝数据到device
+    cudaMemcpy(d_x, h_x, M, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_y, h_y, M, cudaMemcpyHostToDevice);
+    
+    // 执行kernel function
+    const int block_size = 128;
+    const int grid_size = (N + block_size - 1) / block_size;
+    add<<<grid_size, block_size>>>(d_x, d_y, d_z, N);
+    
+    // 拷贝结果回Host
+    cudaMemcpy(h_z, d_z, M, cudaMemcpyDeviceToHost);
+    
+    // 释放显存和内存
+    free(h_x);
+    free(h_y);
+    free(h_z);
+    cudaFree(d_x);
+    cudaFree(d_y);
+    cudaFree(d_z);
+    return 0;
+}
+```
+
+**问题:** 如果调用`cuda_Free()`之前，进程意外中断退出，显存会被释放吗？
+
+
+### 3. Sobel边缘检测
+
+![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/sobel_operator.png)
+<div style="text-align: center;">各类边缘检测算子</div>
+
+```c++
+
+//GPU实现Sobel边缘检测
+//             x0 x1 x2 
+//             x3 x4 x5 
+//             x6 x7 x8 
+__global__ void sobel_gpu(unsigned char* in, unsigned char* out, int imgHeight, int imgWidth)
+{
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int index = y * imgWidth + x;
+    int Gx = 0;
+    int Gy = 0;
+    unsigned char x0, x1, x2, x3, x4, x5, x6, x7, x8;
+    if (x > 0 && x < imgWidth && y>0 && y < imgHeight)
+    {
+        x0 = in[(y - 1) * imgWidth + x - 1];
+        x1 = in[(y - 1) * imgWidth + x ];
+        x2 = in[(y - 1) * imgWidth + x + 1];
+        x3 = in[(y) * imgWidth + x - 1];
+        x4 = in[(y ) * imgWidth + x ];
+        x5 = in[(y ) * imgWidth + x + 1];
+        x6 = in[(y + 1) * imgWidth + x - 1];
+        x7 = in[(y + 1) * imgWidth + x ];
+        x8 = in[(y + 1) * imgWidth + x + 1];
+        Gx = (x0 + x3 * 2 + x6) - (x2 + x5 * 2 + x8);
+        Gy = (x0 + x1 * 2 + x2) - (x6 + x7 * 2 + x8);
+        out[index] = (abs(Gx) + abs(Gy)) / 2;
+    }
+}
+
+
+int main()
+{
+    //利用opencv的接口读取图片
+    Mat img = imread("1.jpg", 0);
+    int imgWidth = img.cols;
+    int imgHeight = img.rows;
+
+    //利用opencv的接口对读入的grayImg进行去噪
+    Mat gaussImg;
+    GaussianBlur(img, gaussImg, Size(3, 3), 0, 0, BORDER_DEFAULT);
+    // GPU结果为dst_gpu
+    Mat dst_gpu(imgHeight, imgWidth, CV_8UC1, Scalar(0));
+
+    //申请指针并将它指向GPU空间
+    size_t num = imgHeight * imgWidth * sizeof(unsigned char);
+    unsigned char* in_gpu;
+    unsigned char* out_gpu;
+    cudaMalloc((void**)&in_gpu, num);
+    cudaMalloc((void**)&out_gpu, num);
+    
+    //定义grid和block的维度（形状）
+    dim3 threadsPerBlock(32, 32);
+    dim3 blocksPerGrid((imgWidth + threadsPerBlock.x - 1) / threadsPerBlock.x,
+        (imgHeight + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+    //将数据从CPU传输到GPU
+    cudaMemcpy(in_gpu, img.data, num, cudaMemcpyHostToDevice);
+    
+    //调用在GPU上运行的核函数
+    sobel_gpu<<<blocksPerGrid,threadsPerBlock>>>(in_gpu, out_gpu, imgHeight, imgWidth);
+
+    //将计算结果传回CPU内存
+    cudaMemcpy(dst_gpu.data, out_gpu, num, cudaMemcpyDeviceToHost);
+    
+    //释放GPU内存空间
+    cudaFree(in_gpu);
+    cudaFree(out_gpu);
+    return 0;
+}
+```
+
+注意例子中的图像大小为`512 * 512` 而我们申请的每个block的线程数量，是`32 * 32`是符合小于1024个线程的约束的。
+
+## 课后疑难小节
+
+-  __device__ 返回类型可以不是void?
+   
+    可以，但是该种情况下，执行效果需要通过其他方式返回。"执行效果"指的是什么？
+
+-  如何更好理解SM？
+   
+    可以将GPU的一个SM类比为CPU的一个物理核心。
+
+-  CUDA程序最大申请的线程数量？
+   
+    $$1024 * (2^{31} - 1) * 65535 * 65535$$
+
+- 申请的threads超出规模回怎么样？
+    
+    会报告"无效启动配置"
+
+- Grid的数量和SM的数量有什么关联吗？
+  
+    `wait for answering`
+  
+- 一个kernel function调用的调用对应一个Grid这个说法正确吗？
+
+     `wait for answering`
+  
+- 如果调用`cuda_Free()`之前，进程意外中断退出，显存会被释放吗？
+
+     `wait for answering`
+    
+    
