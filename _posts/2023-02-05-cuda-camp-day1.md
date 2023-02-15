@@ -578,6 +578,6 @@ int main()
   
 - 如果调用`cuda_Free()`之前，进程意外中断退出，显存会被释放吗？
 
-     `wait for answering`
+     会释放。
     
     
