@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "NVIDIA CUDA Camp -- Day 2[新手参加CUDA线上训练营]"
+title: "NVIDIA CUDA Camp -- Day 2"
 author: "Yalun Hu"
 categories: journal
 tags: [Blog, CUDA]

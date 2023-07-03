@@ -8,19 +8,21 @@ Algorithmic is a place where I share my technical notes at.
 
 Hope you can find something you're interested in my blog.
 
-### About the author
+![sky](/assets/img/about/shanklin.jpg)
+
+## About the author
 
 [Hi I'm Allan!]({{ site.github.url }}{% post_url 2023-01-01-about-the-author %})
 
-### Blogs
+## Blogs
 
 [Click here to see all blogs](/blogs.html)
 
-### License
+## License
 
 This project is distributed under the [MIT License](http://choosealicense.com/licenses/mit/).
 
-### Develop Based on Lagrange
+## Develop Based on Lagrange
 
 This github-page is developed based on [Lagrange](https://github.com/LeNPaul/Lagrange).
 

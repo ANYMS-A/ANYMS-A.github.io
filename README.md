@@ -1,5 +1,5 @@
 # Algorithmic
 
-Allan's personal blog: [url](https://anyms-a.github.io/)
+[Allan's personal blog](https://anyms-a.github.io/)
 
-# Develop Based on Lagrange
+This github-page is developed based on [Lagrange](https://github.com/LeNPaul/Lagrange).
