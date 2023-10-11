@@ -115,11 +115,12 @@ CUDA安装后，有很多的sample示例在起安装的文件夹下，可以自�
 
 下图是一个在jetson nano上运行cuda示例程序的一个截图，该程序是用来查看设备各项特性的。
 
-![](/assets/img/2023-02-05-cuda-camp-day1/cuda_example_jetson.png)
+![](../assets/img/2023-02-05-cuda-camp-day1/cuda_example_jetson.png)
 <div style="text-align: center;">截图</div>
 
 下图是一个在作者装有2060显卡上运行同样的示例程序的截图:
-![](/assets/img/2023-02-05-cuda-camp-day1/cuda_example_2060.png)
+![](../assets/img/2023-02-05-cuda-camp-day1/cuda_example_2060.png)
+
 <div style="text-align: center;">截图</div>
 
 对比之下，是能看出两种设备的资源差异的。
@@ -130,7 +131,7 @@ CUDA安装后，有很多的sample示例在起安装的文件夹下，可以自�
 
 编程模式：Extended C
 
-![CUDA Program](/assets/img/2023-02-05-cuda-camp-day1/cuda_program.png)
+![CUDA Program](../assets/img/2023-02-05-cuda-camp-day1/cuda_program.png)
 <div style="text-align: center;">课件截图</div>
 
 1. 数据从内存复制到显存。
@@ -207,13 +208,13 @@ symbol
 
 ## CUDA程序的编译
 
-![](/assets/img/2023-02-05-cuda-camp-day1/cuda_compile_pipe.png)
+![](../assets/img/2023-02-05-cuda-camp-day1/cuda_compile_pipe.png)
 <div style="text-align: center;">课件截图</div>
 
 不同型号的GPU对应了不同类型的架构，因此也对应了不同的编译参数:
 关键点：--gpu-architecture参数需要 **小于** --gpu-code
 
-![](/assets/img/2023-02-05-cuda-camp-day1/nvcc_example.png)
+![](../assets/img/2023-02-05-cuda-camp-day1/nvcc_example.png)
 <div style="text-align: center;">课件截图</div>
 
 关于如何确定自己机器上GPU的architecture, 建议直接搜显卡的型号查看。也有人建议可以使用 cuda device prop查询，但是作者目前为止还没有完全搞明白具体的做法。
@@ -254,13 +255,15 @@ Kernel timeline输出的是以GPU kernel为单位的一段时间的运行时间�
 
 关于nvprof的参数，同样也可以通过 `nvprof --help进行查看`
 
+练习：[hello from GPU](../assets/notebooks/cuda_exercise/hello_gpu.html)
+
 
 ## 线程层次
 
-![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch.png)
+![cuda_threads_blocks_grids](../assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch.png)
 <div style="text-align: center;">课件截图</div>
 
-![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch1.png)
+![cuda_threads_blocks_grids](../assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch1.png)
 <div style="text-align: center;">课件截图</div>
 
 核函数调用时的会需要指定每个grid中block的数量，以及每个block中thread的数量:
@@ -269,7 +272,8 @@ HelloFromGPU<<<num_blocks_in_one_grid, num_threads_in_one_block>>>
 ```
 
 执行时，所有申请的线程，都会执行相同的核函数。
-![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch2.png)
+![cuda_threads_blocks_grids](../assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch2.png)
+
 <div style="text-align: center;">课件截图</div>
 
 
@@ -279,14 +283,15 @@ HelloFromGPU<<<num_blocks_in_one_grid, num_threads_in_one_block>>>
 
 一个SM不仅仅执行一个block，但是一个block中的thread一定在同一个SM中。
 如何能让SM中驻留更多的活跃的block也是cuda程序优化的目标之一。
-![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch3.png)
+![cuda_threads_blocks_grids](../assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch3.png)
+
 <div style="text-align: center;">课件截图</div>
 
-![cuda_threads_blocks_grids](/assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch4.png)
+![cuda_threads_blocks_grids](../assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch4.png)
 <div style="text-align: center;">课件截图</div>
 
-## 为什么需要分block和thread层级。
-![why_need_block_threads](/assets/img/2023-02-05-cuda-camp-day1/why_need_block_and_thread.png)
+## 为什么需要分block和thread层级
+![why_need_block_threads](../assets/img/2023-02-05-cuda-camp-day1/why_need_block_and_thread.png)
 <div style="text-align: center;">课件截图</div>
 和GPU的architecture有关。
 
@@ -295,16 +300,16 @@ HelloFromGPU<<<num_blocks_in_one_grid, num_threads_in_one_block>>>
 
 ## 如何确定线程执行的数据
 
-![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/cuda_execute_pipeline.png)
+![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/cuda_execute_pipeline.png)
 <div style="text-align: center;">课件截图</div>
 
 单个方向上的例子：
 
-![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/define_data_index.png)
+![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/define_data_index.png)
 <div style="text-align: center;">课件截图</div>
 
 ## CUDA的内存分配
-![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/cuda_memory_assign.png)
+![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/cuda_memory_assign.png)
 <div style="text-align: center;">课件截图</div>
 
 ```c++
@@ -347,12 +352,12 @@ grid_size = (N + block_size - 1) / block_size;
 
 因为最小的线程数量调度的单位是一个warp也就是32个。因此一个block中的线程个数，尽量为32的倍数。
 
-![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/how_many_threads_should_in_a_warp.png)
+![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/how_many_threads_should_in_a_warp.png)
 <div style="text-align: center;">课件截图</div>
 
 ## 如果数据过大，线程不够用怎么办
 
-![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/what_if_too_many_data.png)
+![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/what_if_too_many_data.png)
 <div style="text-align: center;">课件截图</div>
 
 例如我只能有8个thread，却要处理长度为32的数组。
@@ -550,7 +555,7 @@ int main()
 
 注意例子中的图像大小为`512 * 512` 而我们申请的每个block的线程数量，是`32 * 32`是符合小于1024个线程的约束的。
 
-## 课后疑难小节
+## 课后疑难小结
 
 -  __device__ 返回类型可以不是void?
    
@@ -565,7 +570,7 @@ int main()
     $$1024 * (2^{31} - 1) * 65535 * 65535$$
 
 - 申请的threads超出规模回怎么样？
-    
+  
     会报告"无效启动配置"
 
 - Grid的数量和SM的数量有什么关联吗？
@@ -579,5 +584,5 @@ int main()
 - 如果调用`cuda_Free()`之前，进程意外中断退出，显存会被释放吗？
 
      会释放。
-    
-    
+
+​    
