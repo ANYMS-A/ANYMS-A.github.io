@@ -18,7 +18,7 @@ cpu中较多的晶体管用于数据缓存和流程控制, 只拥有几个少数
 - 流水线优化单元: 如乱序执行、分支断定预测、memory预存取等。
 
 
-![cpu arch](/assets/img/2023-02-05-cuda-camp-day1/cpu_arch.png)
+![cpu arch](../assets/img/2023-02-05-cuda-camp-day1/cpu_arch.png)
 <div style="text-align: center;">课件截图</div>
 
 ## 单核（少核）处理器发展的物理约束
@@ -43,7 +43,7 @@ P 为功耗， V是电压，C是和制程有关的一个常数项，f是时钟�
 
 
 
-![cuda_core_arch](/assets/img/2023-02-05-cuda-camp-day1/cuda_core_arch.png)
+![cuda_core_arch](../assets/img/2023-02-05-cuda-camp-day1/cuda_core_arch.png)
 <div style="text-align: center;">课件截图</div>
 
 - 图中的深浅黄色叠加的小方块，表示的是一个SIMD function unit。（Single Instruction Multiple Data，单指令多数据流，能够复制多个操作数，并把它们打包在大型寄存器的一组指令集。
@@ -55,7 +55,7 @@ P 为功耗， V是电压，C是和制程有关的一个常数项，f是时钟�
 
 - Up to 1536 individual contexts can be stored。
 
-![cuda_core_arch_detail](/assets/img/2023-02-05-cuda-camp-day1/cuda_core_arch_detail.png)
+![cuda_core_arch_detail](../assets/img/2023-02-05-cuda-camp-day1/cuda_core_arch_detail.png)
 <div style="text-align: center;">课件截图</div>
 
 SM: Stream Multi-Processor。SM的核心组件包括多个cuda core, 共享的内存，一些寄存器等。SM可以并发执行数百个线程，
@@ -266,10 +266,17 @@ Kernel timeline输出的是以GPU kernel为单位的一段时间的运行时间�
 ![cuda_threads_blocks_grids](../assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch1.png)
 <div style="text-align: center;">课件截图</div>
 
+每个线程在其线程块内部均会被分配一个索引，从 `0` 开始。此外，每个线程块也会被分配一个索引，并从 `0` 开始。正如线程组成线程块，线程块又会组成**网格**，而网格是 CUDA 线程层次结构中级别最高的实体。简言之，CUDA 核函数在由一个或多个线程块组成的网格中执行，且每个线程块中均包含相同数量的一个或多个线程。
+
+CUDA 核函数可以访问能够识别如下两种索引的特殊变量：正在执行核函数的线程（位于线程块内）索引和线程所在的线程块（位于网格内）索引。这两种变量分别为 `threadIdx.x` 和 `blockIdx.x`。
+
 核函数调用时的会需要指定每个grid中block的数量，以及每个block中thread的数量:
+
 ```c++
 HelloFromGPU<<<num_blocks_in_one_grid, num_threads_in_one_block>>>
 ```
+
+核函数调用的配置参数和grid的数量无关？
 
 执行时，所有申请的线程，都会执行相同的核函数。
 ![cuda_threads_blocks_grids](../assets/img/2023-02-05-cuda-camp-day1/cuda_threads_arch2.png)
@@ -308,7 +315,129 @@ HelloFromGPU<<<num_blocks_in_one_grid, num_threads_in_one_block>>>
 ![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/define_data_index.png)
 <div style="text-align: center;">课件截图</div>
 
+线程块包含的线程具有数量限制：确切地说是 1024 个。为增加加速应用程序中的并行量，我们必须要能在多个线程块之间进行协调。
+
+CUDA 核函数可以访问给出块中线程数的特殊变量：`blockDim.x`。通过将此变量与 `blockIdx.x` 和 `threadIdx.x` 变量结合使用，并借助惯用表达式 `threadIdx.x + blockIdx.x * blockDim.x` 在包含多个线程的多个线程块之间组织并行执行，并行性将得以提升。以下是详细示例。
+
+执行配置 `<<<10, 10>>>` 将启动共计拥有 100 个线程的网格，这些线程均包含在由 10 个线程组成的 10 个线程块中。因此，我们希望每个线程（`0` 至 `99` 之间）都能计算该线程的某个唯一索引。
+
+- 如果线程块 `blockIdx.x` 等于 `0`，则 `blockIdx.x * blockDim.x` 为 `0`。向 `0` 添加可能的 `threadIdx.x` 值（`0` 至 `9`），之后便可在包含 100 个线程的网格内生成索引 `0` 至 `9`。
+- 如果线程块 `blockIdx.x` 等于 `1`，则 `blockIdx.x * blockDim.x` 为 `10`。向 `10` 添加可能的 `threadIdx.x` 值（`0` 至 `9`），之后便可在包含 100 个线程的网格内生成索引 `10` 至 `19`。
+- 如果线程块 `blockIdx.x` 等于 `5`，则 `blockIdx.x * blockDim.x` 为 `50`。向 `50` 添加可能的 `threadIdx.x` 值（`0` 至 `9`），之后便可在包含 100 个线程的网格内生成索引 `50` 至 `59`。
+- 如果线程块 `blockIdx.x` 等于 `9`，则 `blockIdx.x * blockDim.x` 为 `90`。向 `90` 添加可能的 `threadIdx.x` 值（`0` 至 `9`），之后便可在包含 100 个线程的网格内生成索引 `90` 至 `99`。
+
+提问：如果执行配置是多维（2dim， 3dim）的情形下，该如何计算索引呢？
+
+CUDA可以将网格和线程块定义为最多具有 3 个维度的变量。使用多个维度定义网格和线程块绝不会对其性能造成任何影响，但这在处理具有多个维度的数据时可能非常有用，例如 2D 矩阵。如要定义二维或三维网格或线程块，可以使用 CUDA 的 `dim3` 类型。
+
+```cpp
+dim3 threads_per_block(16, 16, 1);
+dim3 number_of_blocks(16, 16, 1);
+someKernel<<<number_of_blocks, threads_per_block>>>();
+```
+
+例子：使用2D的执行配置实现矩阵乘法运算的加速
+
+```cpp
+#include <stdio.h>
+
+#define N  64
+
+__global__ void matrixMulGPU( int * a, int * b, int * c )
+{
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
+      
+    int val = 0; 
+  
+    if (row < N && col < N)
+    {
+        for ( int k = 0; k < N; ++k )
+          val += a[row * N + k] * b[k * N + col];
+        c[row * N + col] = val;
+    }
+}
+
+/*
+ * This CPU function already works, and will run to create a solution matrix
+ * against which to verify your work building out the matrixMulGPU kernel.
+ */
+
+void matrixMulCPU( int * a, int * b, int * c )
+{
+  int val = 0;
+
+  for( int row = 0; row < N; ++row )
+    for( int col = 0; col < N; ++col )
+    {
+      val = 0;
+      for ( int k = 0; k < N; ++k )
+        val += a[row * N + k] * b[k * N + col];
+      c[row * N + col] = val;
+    }
+}
+
+int main()
+{
+  int *a, *b, *c_cpu, *c_gpu; // Allocate a solution matrix for both the CPU and the GPU operations
+
+  int size = N * N * sizeof (int); // Number of bytes of an N x N matrix
+
+  // Allocate memory
+  cudaMallocManaged (&a, size);
+  cudaMallocManaged (&b, size);
+  cudaMallocManaged (&c_cpu, size);
+  cudaMallocManaged (&c_gpu, size);
+
+  // Initialize memory; create 2D matrices
+  for( int row = 0; row < N; ++row )
+    for( int col = 0; col < N; ++col )
+    {
+      a[row*N + col] = row;
+      b[row*N + col] = col+2;
+      c_cpu[row*N + col] = 0;
+      c_gpu[row*N + col] = 0;
+    }
+
+  /*
+   * Assign `threads_per_block` and `number_of_blocks` 2D values
+   * that can be used in matrixMulGPU above.
+   */
+
+  dim3 threads_per_block = dim3(8, 8);
+  dim3 number_of_blocks = dim3((N / threads_per_block.x) + 1, (N / threads_per_block.y) + 1);
+
+  matrixMulGPU <<< number_of_blocks, threads_per_block >>> ( a, b, c_gpu );
+
+  cudaDeviceSynchronize();
+
+  // Call the CPU version to check our work
+  matrixMulCPU( a, b, c_cpu );
+
+  // Compare the two answers to make sure they are equal
+  bool error = false;
+  for( int row = 0; row < N && !error; ++row )
+    for( int col = 0; col < N && !error; ++col )
+      if (c_cpu[row * N + col] != c_gpu[row * N + col])
+      {
+        printf("FOUND ERROR at c[%d][%d]\n", row, col);
+        error = true;
+        break;
+      }
+  if (!error)
+    printf("Success!\n");
+
+  // Free all our allocated memory
+  cudaFree(a); cudaFree(b);
+  cudaFree( c_cpu ); cudaFree( c_gpu );
+}
+
+```
+
+
+
 ## CUDA的内存分配
+
 ![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/cuda_memory_assign.png)
 <div style="text-align: center;">课件截图</div>
 
@@ -328,6 +457,14 @@ cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
 现在我们要修改指针`d_a`的值（将它修改为GPU上申请到的显存的首地址），
 因此需要传入`d_a`的指针。
 
+## 如果线程数量超过任务的数量怎么办？
+
+多出来的线程访问不存在的元素会导致运行时错误/或者不会报错，但是由于数组访问已经越界，可能会造成后续的内存错误。所以必须在代码中检查
+
+`threadIdx.x + blockIdx.x * blockDim.x`的index的值是小于数组中的元素的。
+
+![threads more than task](../assets/img/2023-02-05-cuda-camp-day1/threads_more_than_task.jpg)
+
 
 ## 如何合理设置grid_size和block_size?
 
@@ -344,7 +481,7 @@ grid_size = (N + block_size - 1) / block_size;
 
 每个block的总线程数量，上限为1024。在cuda的例子中可以看到：
 
-`Maximum numner of threads oer block: 1024`
+`Maximum numner of threads per block: 1024`
 
 换言之，block的dimension的size（x, y, z）虽然最大的dim各为（1024， 1024， 64）但是x,y,z的乘积不能超过1024。
 
@@ -360,9 +497,13 @@ grid_size = (N + block_size - 1) / block_size;
 ![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/what_if_too_many_data.png)
 <div style="text-align: center;">课件截图</div>
 
-例如我只能有8个thread，却要处理长度为32的数组。
+例如我只能有8个thread，却要处理长度为32的数组。答案是：**网格跨度循环**。
 
-方法：在核函数里面加一个loop
+![grid_strided_1](../assets/img/2023-02-05-cuda-camp-day1/grid_strided_01.jpg)
+
+![grid_strided_2](../assets/img/2023-02-05-cuda-camp-day1/grid_strided_02.jpg)
+
+方法：在核函数里面加一个loop, CUDA 提供一个可给出网格中线程块数的特殊变量：`gridDim.x`. 在每个线程里面，要依靠 `gridDim.x * blockDim.x`作为循环的步进大小，
 
 代码示例：
 
@@ -472,12 +613,98 @@ int main(void)
 }
 ```
 
-**问题:** 如果调用`cuda_Free()`之前，进程意外中断退出，显存会被释放吗？
+**问题:** 如果调用`cudaFree()`之前，进程意外中断退出，显存会被释放吗？
+
+进阶版两向量相加：
+```cpp
+#include <stdio.h>
+#include <assert.h>
+
+inline cudaError_t checkCuda(cudaError_t result)
+{
+  if (result != cudaSuccess) {
+    fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
+    assert(result == cudaSuccess);
+  }
+  return result;
+}
+
+__global__ void initWith(float num, float *a, int N)
+{
+
+  int index = blockDim.x * blockIdx.x + threadIdx.x;
+  int stride = gridDim.x * blockDim.x;
+  
+  for(; index < N; index += stride)
+  {
+    a[index] = num;
+  }
+}
+
+__global__ void addVectorsInto(float *result, float *a, float *b, int N)
+{
+  int index = blockDim.x * blockIdx.x + threadIdx.x;
+  int stride = gridDim.x * blockDim.x;
+  
+  for(; index < N; index += stride)
+  {
+    result[index] = a[index] + b[index];
+  }
+}
+
+void checkElementsAre(float target, float *array, int N)
+{
+  for(int i = 0; i < N; i++)
+  {
+    if(array[i] != target)
+    {
+      printf("FAIL: array[%d] - %0.0f does not equal %0.0f\n", i, array[i], target);
+      exit(1);
+    }
+  }
+  printf("SUCCESS! All values added correctly.\n");
+}
+
+int main()
+{
+  const int N = 2<<20;
+  size_t size = N * sizeof(float);
+
+  float *a;
+  float *b;
+  float *c;
+  
+  checkCuda(cudaMallocManaged(&a, size));
+  checkCuda(cudaMallocManaged(&b, size));
+  checkCuda(cudaMallocManaged(&c, size));
+  
+  int blocks_num = 32;
+  int threads_per_block = 1024;
+
+  initWith<<<blocks_num, threads_per_block>>>(3, a, N);
+  initWith<<<blocks_num, threads_per_block>>>(4, b, N);
+  initWith<<<blocks_num, threads_per_block>>>(0, c, N);
+  checkCuda(cudaGetLastError());
+
+  addVectorsInto<<<blocks_num, threads_per_block>>>(c, a, b, N);
+  checkCuda(cudaGetLastError());
+  
+  checkCuda(cudaDeviceSynchronize());
+  checkElementsAre(7, c, N);
+
+  cudaFree(a);
+  cudaFree(b);
+  cudaFree(c);
+}
+
+```
+
+
 
 
 ### 3. Sobel边缘检测
 
-![cuda_execute_pipeline](/assets/img/2023-02-05-cuda-camp-day1/sobel_operator.png)
+![cuda_execute_pipeline](../assets/img/2023-02-05-cuda-camp-day1/sobel_operator.png)
 <div style="text-align: center;">各类边缘检测算子</div>
 
 ```c++
