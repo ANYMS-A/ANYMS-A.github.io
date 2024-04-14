@@ -11,9 +11,9 @@ image: mountains.jpg
 ## GPU内存的种类以及每个线程对它的读写权限
 
 1. Register
-2. Shared Memory
-3. Local Memory
-4. Global Memory
+2. Shared Memory: 每个block共享
+3. Local Memory: 线程私有
+4. Global Memory: 每个设备共享 每个设备可以完成
 5. Constant Memory
 6. Texture Memory
 
@@ -46,6 +46,151 @@ cudaHostAlloc() // for allocating Pinned(Page-locked) memory.
 ![cpu arch](../assets/img/2023-02-07-cuda-camp-day2/memCpy.png)
 <div style="text-align: center;">课件截图</div>
 
+---
+
+## 统一内存 （Unified Memory）
+
+分配 UM 时，内存尚**未驻留**在主机或设备上。主机或设备尝试访问内存时会发生 [页错误](https://en.wikipedia.org/wiki/Page_fault)，此时主机或设备会批量迁移所需的数据。同理，当 CPU 或加速系统中的任何 GPU 尝试访问尚未驻留在其上的内存时，会发生页错误并触发迁移。这里的**未驻留** 笔者暂时的理解（根据NIVDIA DLI给的实例的理解）是申请成功但是未初始化的内存。
+
+- 当发生内存迁移时，使用`nsys profile --stats = true` 分析程序，可以看到 **CUDA内存操作统计**信息 （**CUDA Memory Operation Statistics**）
+
+- CUDA Memory Operation Statistics 可以显示数据从 **主机到设备**（HtoD）或从 **设备到主机**（DtoH）的迁移。
+
+- CUDA Memory Operation Statistic 包含有多少个“操作（operation）”。 如果看到许多小的内存迁移操作，则表明出现页错误，并且每次在请求的位置出现页面错误时都会发生小内存迁移。
+
+例如，有`hostFunction` 和 `gpuKernel` 两个函数，我们可以通过这两个函数分别在CPU和GPU上 初始化数组的元素。
+
+```c++
+__global__
+void deviceKernel(int *a, int N)
+{
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  int stride = blockDim.x * gridDim.x;
+
+  for (int i = idx; i < N; i += stride)
+  {
+    a[i] = 1;
+  }
+}
+
+void hostFunction(int *a, int N)
+{
+  for (int i = 0; i < N; ++i)
+  {
+    a[i] = 1;
+  }
+}
+int main()
+{
+
+  int N = 2<<24;
+  size_t size = N * sizeof(int);
+  int *a;
+  cudaMallocManaged(&a, size);
+
+  /*
+   * Conduct experiments to learn more about the behavior of
+   * `cudaMallocManaged`.
+   *
+   * case1: What happens when unified memory is accessed only by the GPU?
+   * case2: What happens when unified memory is accessed only by the CPU?
+   * case3: What happens when unified memory is accessed first by the GPU then the CPU?
+   * case4: What happens when unified memory is accessed first by the CPU then the GPU?
+   *
+   * Hypothesize about UM behavior, page faulting specificially, before each
+   * experiment, and then verify by running `nsys`.
+   */
+  
+  /*case1
+  hostFunction(a, N);
+  */
+  
+  /*case2
+  deviceKernel<<<256, 256>>>(a, N);
+  cudaDeviceSynchronize();
+  */
+  
+  /*case3
+  hostFunction(a, N);
+  deviceKernel<<<256, 256>>>(a, N);
+  cudaDeviceSynchronize();
+  */
+  
+  /*case4,
+  deviceKernel<<<256, 256>>>(a, N);
+  cudaDeviceSynchronize();
+  hostFunction(a, N);
+  */
+
+  cudaFree(a);
+}
+```
+
+- Case1: 没有显示 CUDA Memory Operation Statistics
+
+- Case2: 没有显示 CUDA Memory Operation Statistics
+
+- Case3: 显示CUDA Memory Operation Statistics
+
+  ```shell
+  CUDA Memory Operation Statistics (nanoseconds)
+  
+  Time(%)      Total Time  Operations         Average         Minimum         Maximum  Name                                                                            
+  -------  --------------  ----------  --------------  --------------  --------------  --------------------------------------------------------------------------------
+    100.0        29549440        4641          6367.0            1952          159232  [CUDA Unified Memory memcpy HtoD]                                               
+  
+  
+  CUDA Memory Operation Statistics (KiB)
+  
+  Total      Operations            Average            Minimum            Maximum  Name                                                                            
+  -----------------  --------------  -----------------  -----------------  -----------------  --------------------------------------------------------------------------------
+           131072.0            4641               28.2              4.000              952.0  [CUDA Unified Memory memcpy HtoD]   
+  ```
+
+  
+
+- Case4: 显示CUDA Memory Operation Statistics
+
+  ```shell
+  Generating CUDA Memory Operation Statistics...
+  CUDA Kernel Statistics (nanoseconds)
+  
+  Time(%)      Total Time   Instances         Average         Minimum         Maximum  Name                                                                            
+  -------  --------------  ----------  --------------  --------------  --------------  --------------------------------------------------------------------------------
+    100.0        18838838           1      18838838.0        18838838        18838838  deviceKernel                                                                    
+  
+  
+  CUDA Memory Operation Statistics (nanoseconds)
+  
+  Time(%)      Total Time  Operations         Average         Minimum         Maximum  Name                                                                            
+  -------  --------------  ----------  --------------  --------------  --------------  --------------------------------------------------------------------------------
+    100.0        21127424         768         27509.7            1632          160032  [CUDA Unified Memory memcpy DtoH]                                               
+  
+  
+  CUDA Memory Operation Statistics (KiB)
+  
+              Total      Operations            Average            Minimum            Maximum  Name                                                                            
+  -----------------  --------------  -----------------  -----------------  -----------------  --------------------------------------------------------------------------------
+           131072.0             768              170.7              4.000             1020.0  [CUDA Unified Memory memcpy DtoH]
+  ```
+
+
+---
+
+## 异步内存预取
+
+在主机到设备和设备到主机的内存传输过程中，我们使用一种技术来减少页错误和按需内存迁移成本，此强大技术称为**异步内存预取**。通过此技术，程序员可以在应用程序代码使用统一内存 (UM) 之前，在后台将其异步迁移至系统中的任何 CPU 或 GPU 设备。此举可以减少页错误和按需数据迁移所带来的成本，并进而提高 GPU 核函数和 CPU 函数的性能。使用异步内存预取的方法是使用`cudaMemPrefetchAsync`：
+```c++
+int deviceId;
+cudaGetDevice(&deviceId);        // The ID of the currently active GPU device.
+
+cudaMemPrefetchAsync(pointerToSomeUMData, size, deviceId);        // Prefetch to GPU device.
+cudaMemPrefetchAsync(pointerToSomeUMData, size, cudaCpuDeviceId);  // Prefetch to host. 
+// `cudaCpuDeviceId` is a built-in CUDA variable.
+                                                                 
+```
+
+在使用异步预取后，**内存传输次数减少了，但是每次传输的量增加了，并且内核执行时间大大减少**。
 
 ## 矩阵乘法的例子
 

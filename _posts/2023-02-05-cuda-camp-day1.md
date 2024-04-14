@@ -36,6 +36,8 @@ P 为功耗， V是电压，C是和制程有关的一个常数项，f是时钟�
 解决方案之一：
 多核心，并行计算。
 
+---
+
 ## GPU 架构
 
 1. 拥有更高的算力
@@ -58,17 +60,51 @@ P 为功耗， V是电压，C是和制程有关的一个常数项，f是时钟�
 ![cuda_core_arch_detail](../assets/img/2023-02-05-cuda-camp-day1/cuda_core_arch_detail.png)
 <div style="text-align: center;">课件截图</div>
 
-SM: Stream Multi-Processor。SM的核心组件包括多个cuda core, 共享的内存，一些寄存器等。SM可以并发执行数百个线程，
-并发能力取决于SM中包含的cuda core（也就是streaming processor）的数量。
-Fermi架构GF100是32个，GF10x是48个。Kepler架构都是192个，Maxwell都是128个。
-kernel启动后，threads会被分配到多个SM中执行，，但是同一个block中的threads必然在同一个SM中并行（逻辑层面）执行。
 
-Warp: 32 CUDA Cores。 一个Warp代表了在物理层面，一起同时执行同一个指令的核心们。（虽然逻辑层面我们认为所有thread是并行执行的，但是其实只有一个Warp中的threads在物理层面算是同时执行）
+
+---
+## 流多处理器（Streaming Multiprocessors)
+
+SM: Stream Multi-Processor。SM的核心组件包括:
+
+- 多个cuda core,
+- 共享的内存，
+- 一些寄存器等。
+
+![](../assets/img/2023-02-05-cuda-camp-day1/sm_1.png)
+
+![](../assets/img/2023-02-05-cuda-camp-day1/sm_2.png)
+
+![](../assets/img/2023-02-05-cuda-camp-day1/sm_3.png)
+
+![](../assets/img/2023-02-05-cuda-camp-day1/sm_4.png)
+
+SM可以并发执行数百个线程，并发能力取决于SM中包含的cuda core（也就是streaming processor）的数量。
+Fermi架构GF100是32个，GF10x是48个。Kepler架构都是192个，Maxwell都是128个。
+kernel启动后，threads会被分配到多个SM中执行，但是**同一个block中的threads必然在同一个SM中并行（逻辑层面）执行**。
+
+Warp: 32 CUDA Cores。 **一个Warp代表了在物理层面，一起同时执行同一个指令的核心们。（虽然逻辑层面我们认为所有thread是并行执行的，但是其实只有一个Warp中的threads在物理层面算是同时执行）**
 一个warp包含32个并行thread，这32个thread执行于SMIT模式。也就是说所有thread执行同一条指令，
 并且每个thread会使用各自的data执行该指令。
 
-warp是调度和运行的基本单元。一个warp需要占用一个SM运行，多个warps需要轮流进入一个SM, 由SM硬件层面的warp scheduler
-负责调度。
+warp是调度和运行的基本单元。一个warp需要占用一个SM运行，多个warps需要轮流进入一个SM, 由SM硬件层面的warp scheduler负责调度。
+
+查看GPU的SM数量以及warpSize的办法为，获取`cudaDeviceProp`类型的变量：
+
+```c++
+int deviceId;
+cudaGetDevice(&deviceId);
+
+cudaDeviceProp props;
+cudaGetDeviceProperties(&props, deviceId);
+
+int computeCapabilityMajor = props.major;
+int computeCapabilityMinor = props.minor;
+int multiProcessorCount = props.multiProcessorCount;
+int warpSize = props.warpSize;
+```
+
+
 
 **冷知识**：市面上买来的显卡，体积和质量大部分是在风扇和对应的电机，处理器芯片本身的质量是较小的。
 
