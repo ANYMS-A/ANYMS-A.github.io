@@ -112,7 +112,7 @@ $$
 
 当训练收敛后，我们取两层MLP中的第一层（即对输入的one-hot进行线性映射的那一层），便得到了一个能够进行词嵌入的embedding layer。
 
-### WordEmbedding的优缺点
+### Word Embedding的优缺点
 优点1: 当时的语言模型在进行训练前，常常会先用CBOW对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
 
 优点2：Word Embedding向量为单词提供了语义（semantics），**即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。** 这是使用one-hot表示无法做到的。
@@ -132,7 +132,29 @@ $$
 $$
 {\vec {King}} - {\vec {Man}} + {\vec {Woman}} \approx {\vec {Queen}}
 $$
-## Sentence Embedding简介
+
+缺点：Word2Vec是根据整体语料库中单词的分布来捕获到单词间的语义，然而同一个单词在不同的句子的 上下文（context）中，会有不同的意思， 例如：
+- "bank of the river" (此处的bank代表着 河床 的意思)
+- "I access my bank account" (此处的bank代表着 银行 的意思)
+
+然而对于Word2Vec这样的"Context-Free"的模型，它针对这两句话中的bank都只能给出相同的表示，**这两个bank都对应着训练好的Embedding层矩阵中的同一列**。
+
+## 句子嵌入(Sentence Embedding)简介
+
+上面的介绍中，我们知道了如何将句子中的每一个单词表示为一个embedding向量，但是熟悉 RAG/向量数据库 的同学们或许知道，向量数据库中的一条向量往往代表着一个完整的句子或者一大段文本，句子或文本段落有长有短，它们又是如何被表示成一个个具有相同维度的embedding向量的呢？
+
+最简单的，我们可以对句子中所有的单词的embedding向量求均值（average word embedding），这样我们也能得到关于一个句子的sentence embedding向量。但是这样的方法是有问题的，例如对于如下的两个句子，它们具有完全相反的含义，然而如果使用average word embedding的方案，它们将会得到一模一样的向量表示。
+
+- I have no money.
+- No, I have money.
+
+在Transformer的时代到来之前，较为流行的Sentence Embedding的方式有：Skip-Thought Vectors 以及 InferSent。它们的核心思想是利用RNN来 捕获 并 融合 出一个综合了整个句子的上下文信息的向量。但随着2017年的paper “Attention Is All You Need” 的出现，sentence embedding的风向基本都转向了基于Transformer的模型架构。
+
+### Sentence Transformers
+使用Transformer类模型来获取sentence embedding向量的方案，当前大都被称为[Sentence Transformers](https://sbert.net/)。比较经典的模型有：
+- Sentence BERT (S-BERT)
+- Universal Sentence Encoder (USE)
+- 以及中文社区的 BGE系列模型 和 M3E系列模型
 
 ## Evaulation Metrics
 
