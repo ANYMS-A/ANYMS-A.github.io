@@ -62,7 +62,7 @@ $$
 {\vec {e}}_{[h \times 1]} = \mathbf{W}_{[h \times v]} \cdot {\vec {i}}_{[v \times 1]}\\
 $$
 
-你或许已经发现，**使用一个矩阵对一个one-hot向量进行线性变换，等同于抽取出该矩阵的一列，抽取的列的序号，正是one-hot向量中，元素1所在的行索引值**。这不仅省去了大量的与0元素相乘的冗余的计算，也能够将输入从一个高维的one-hot向量简化成单词在字典中的整数索引，这正是当前PyTorch或者其他流行的深度学习框架中，nn.Embedding layer的基本原理。
+你或许已经发现，**使用一个矩阵对一个one-hot向量进行线性变换，等同于抽取出该矩阵的一列，抽取的列的序号，正是one-hot向量中，元素1所在的行索引值**。这不仅省去了大量的与0元素相乘的冗余的计算，也能够将输入从一个高维的one-hot向量简化成单词在字典中的整数索引，这正是当前PyTorch或者其他流行的深度学习框架中，nn.Embedding layer的基本实现原理。
 
 $$
 \left[
@@ -106,7 +106,14 @@ $$
 - CBOW（ Continuous Bag of Words）
 - Skip-Gram
 ![](../assets/img/2024-07-28-nlp-embedding/cbow-and-skip-gram.png)
+简单来讲，CBOW会训练一个简单的两层MLP进行分类任务，它以一个中心单词周围的几个词（$${\vec {i}}^{t-2}, {\vec {i}}^{t-1}, {\vec {i}}^{t+1}, {\vec {i}}^{t+2}$$）作为输入，预测该中心单词（$${\vec {i}}^{t}$$）。作为输入的one-hot向量们，经由同一个Linear层（这个层就是前面提到的word embedding时用的矩阵）的映射后，求和，再由另一个Linear层映射回和one-hot向量相同的维度，最后进行softmax转化为概率分布，最后进行交叉熵计算loss。
 
+相反的，Skip-Gram是以中心词作为输入，预测它周围的几个词。
+
+当训练收敛后，我们取两层MLP中的第一层（即对输入的one-hot进行映射的那一层），便得到了一个能够进行词嵌入的embedding layer。
+
+### WordEmbedding的好处
+当时的语言模型在进行训练前，常常会先用CBOW对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，通常能够为最终的模型表现进行提升。
 
 ## Sentence Embedding简介
 
