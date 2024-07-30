@@ -106,15 +106,32 @@ $$
 - CBOW（ Continuous Bag of Words）
 - Skip-Gram
 ![](../assets/img/2024-07-28-nlp-embedding/cbow-and-skip-gram.png)
-简单来讲，CBOW会训练一个简单的两层MLP进行分类任务，它以一个中心单词周围的几个词（$${\vec {i}}^{t-2}, {\vec {i}}^{t-1}, {\vec {i}}^{t+1}, {\vec {i}}^{t+2}$$）作为输入，预测该中心单词（$${\vec {i}}^{t}$$）。作为输入的one-hot向量们，经由同一个Linear层（这个层就是前面提到的word embedding时用的矩阵）的映射后，求和，再由另一个Linear层映射回和one-hot向量相同的维度，最后进行softmax转化为概率分布，最后进行交叉熵计算loss。
+简单来讲，CBOW会训练一个简单的两层MLP进行分类任务，它以一个中心单词周围的几个词（$${\vec {i}}^{t-2}, {\vec {i}}^{t-1}, {\vec {i}}^{t+1}, {\vec {i}}^{t+2}$$）作为输入，预测该中心单词（$${\vec {i}}^{t}$$）。作为输入的one-hot向量们，经由同一个Linear层（这个层就是前面提到的word embedding时用的矩阵）的映射后，求和，再由另一个Linear层（该层最后会被抛弃不用）映射回和one-hot向量相同的维度，最后进行softmax转化为概率分布，最后进行交叉熵计算loss。
 
 相反的，Skip-Gram是以中心词作为输入，预测它周围的几个词。
 
-当训练收敛后，我们取两层MLP中的第一层（即对输入的one-hot进行映射的那一层），便得到了一个能够进行词嵌入的embedding layer。
+当训练收敛后，我们取两层MLP中的第一层（即对输入的one-hot进行线性映射的那一层），便得到了一个能够进行词嵌入的embedding layer。
 
-### WordEmbedding的好处
-当时的语言模型在进行训练前，常常会先用CBOW对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，通常能够为最终的模型表现进行提升。
+### WordEmbedding的优缺点
+优点1: 当时的语言模型在进行训练前，常常会先用CBOW对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
 
+优点2：Word Embedding向量为单词提供了语义（semantics），**即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。** 这是使用one-hot表示无法做到的。
+
+$$
+Distance1_{EUC} = \sqrt[2]{{{\vec {cat}} - {\vec {kitty}}}^{2}} = 0.1 \\
+Distance2_{EUC} = \sqrt[2]{{{\vec {cat}} - {\vec {apple}}}^{2}} = 2.2
+$$
+
+$$
+Similarity1_{Cos} = \frac{{\vec {cat}} \cdot {\vec {kitty}}}{{\Vert {\vec {cat}} \Vert} \times {\Vert {\vec {kitty}} \Vert}} = 0.95 \\
+Similarity2_{Cos} = \frac{{\vec {cat}} \cdot {\vec {apple}}}{{\Vert {\vec {cat}} \Vert} \times {\Vert {\vec {apple}} \Vert}} = -0.02
+$$
+
+优点3：一个有趣的现象为，Word Embedding向量为单词间提供了“算术运算”的可能性。
+
+$$
+{\vec {King}} - {\vec {Man}} + {\vec {Woman}} \approx {\vec {Queen}}
+$$
 ## Sentence Embedding简介
 
 ## Evaulation Metrics
