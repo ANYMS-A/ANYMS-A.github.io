@@ -156,6 +156,10 @@ $$
 - Sentence BERT (S-BERT)
 - Universal Sentence Encoder (USE)
 - 以及中文社区的 BGE系列模型 和 M3E系列模型
+后续我们将以S-BERT模型作为我们解析的用例模型。
+
+[TODO] BERT大致结构，输入输出流程，抽象成公式计算，它为什么在semantic-similarity上表现不如S-BERT，它的设计为什么导致了它做semantic-similarity比S-BERT慢很多。
+[TODO] 简介S-BERT的训练目标，和普通BERT有什么区别，得到了怎样的优势。
 
 ## Evaulation Metrics
 
