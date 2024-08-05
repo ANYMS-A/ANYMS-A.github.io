@@ -1,14 +1,18 @@
 ---
 
 layout: post
-title: "From Sementic Representation to RAG: The Story of Embedding"
+title: "从语义表示到RAG: Embedding的前世今生"
 author: "Yalun Hu"
 categories: journal
 tags: [Blog, NLP, LLM, Embedding]
-image: 2024-04-13-langchain-agent/cover.jpeg
+image: 2024-07-28-nlp-embedding/cover.jpeg
 
 
 ---
+
+## 前言
+
+当今如火如荼的大语言模型应用领域，向量数据库的使用几乎无处不在。文本类向量数据库中的每一条向量，是由一段文本经某种算法映射后所表示而成的。那么，文本是如何被表示成向量的呢？我们该如何训练一个能够实现 “文本 ---> 向量” 这一功能的神经网络模型呢？这篇文章将为你进行逐一解答。
 
 ## 词嵌入(Word Embedding)简介
 
@@ -18,13 +22,13 @@ image: 2024-04-13-langchain-agent/cover.jpeg
 
 ### One-Hot Encoding
 
-最初，单词被表示为它在一个词典中的索引（index）。比如一个语料库中一共有1000个单词，"language"这个单词在词典中排第200个，那么它可以被表示为一个独热向量（one-hot vector），即一个维度为1000，其第200个元素的值为1，其它所有元素均为0的向量。one-hot编码的特点是：简单，高维度，稀疏，离散，单词间无相似性（无语义）。
+最初，单词被表示为它在一个词典中的索引（index）。比如一个语料库中一共有1000个单词，"language"这个单词在词典中排第200个，那么它可以被表示为一个独热向量（one-hot vector），即一个维度为1000，其第200个元素的值为1，其它所有元素均为0的向量。one-hot编码的特点是：简单，高维度，稀疏，离散，维度由词典大小决定，单词间的表示无相似性度量（无语义）。
 
 ![](../assets/img/2024-07-28-nlp-embedding/one-hot-encoding2.png)
 
 ### 什么是词嵌入（Word Embedding）
 
-Word Embedding可被看作一种映射（mapping）：将单词（word）看作一段文本的基础单元，将某个单词的one-hot vector/或者index，通过一定的方法，**映射或嵌入**到一个向量空间的过程。之所以被称为嵌入，是因为这个映射通常伴随着向量的降维，例如语料库的词典大小通常有几十万的单词，但是最后embedding得到的词向量维度往往是几百或者几千这样的维度。Word Embedding的特点是，低维度，稠密，连续，能够捕捉单词间的相似度。
+Word Embedding可被看作一种映射（mapping）：将单词（word）看作一段文本的基础单元，将某个单词的one-hot vector/或者index，通过一定的方法，**映射或嵌入**到一个向量空间的过程。之所以被称为嵌入，是因为这个映射通常伴随着向量的降维，例如语料库的词典大小通常有几十万的单词，但是最后embedding得到的词向量维度往往是几百或者几千这样的维度。Word Embedding的特点是，低维度，稠密，连续（浮点型），能够捕捉单词间的相似度。
 
 ![](../assets/img/2024-07-28-nlp-embedding/word-embedding.png)
 
@@ -43,13 +47,17 @@ Word2Vec来自于2013年谷歌研究团队的一篇paper: [“Efficient Estimati
 $$
 {\vec {i}}_{[v \times 1]}
 $$
-作为输入，输入到一个训练好的单层的神经网络Linear层
+作为输入，输入到一个训练好的单层的神经网络Linear层。
+
+Linear层的作用十分简单，就是将输入的向量，乘上一个矩阵，相当于对输入向量做一个线性变换，假设矩阵为：
 $$
 \mathbf{W}_{[h \times v]}
 $$
-中，经由该层的线性映射，可以得到一个低维度的向量
+
+
+经由该层的线性映射，可以得到一个低维度的向量
 $$
-{\vec {e}}_{[h \times 1]}
+{\vec {e}}_{[h \times 1]} \space \space_{v >> h}
 $$
 这个低维度的向量
 $$
@@ -144,7 +152,13 @@ $$
 
 上面的介绍中，我们知道了如何将句子中的每一个单词表示为一个embedding向量，但是熟悉 RAG/向量数据库 的同学们或许知道，向量数据库中的一条向量往往代表着一个完整的句子或者一大段文本，句子或文本段落有长有短，它们又是如何被表示成一个个具有相同维度的embedding向量的呢？
 
-最简单的，我们可以对句子中所有的单词的embedding向量求均值（average word embedding），这样我们也能得到关于一个句子的sentence embedding向量。但是这样的方法是有问题的，例如对于如下的两个句子，它们具有完全相反的含义，然而如果使用average word embedding的方案，它们将会得到一模一样的向量表示。
+最简单的，我们可以对句子中所有的单词的embedding向量求均值（average word embedding），这样我们也能得到关于一个句子的sentence embedding向量。
+$$
+\vec{S} = (\vec{w_{1}} + \vec{w_{2}} + \space ... + \space \vec{w_{n}}) / n
+$$
+
+
+但是这样的方法是有问题的，例如对于如下的两个句子，它们具有完全相反的含义，然而如果使用average word embedding的方案，它们将会得到一模一样的向量表示。
 
 - I have no money.
 - No, I have money.
@@ -158,8 +172,22 @@ $$
 - 以及中文社区的 BGE系列模型 和 M3E系列模型
 后续我们将以S-BERT模型作为我们解析的用例模型。
 
-[TODO] BERT大致结构，输入输出流程，抽象成公式计算，它为什么在semantic-similarity上表现不如S-BERT，它的设计为什么导致了它做semantic-similarity比S-BERT慢很多。
-[TODO] 简介S-BERT的训练目标，和普通BERT有什么区别，得到了怎样的优势。
+### BERT架构简介
+
+BERT是encoder-only的Transformer架构，在此为了理解方便，不会深扒Transformer的细节，而是从宏观，抽象的“输入和输出分别是什么”来对BERT进行介绍。
+
+![](../assets/img/2024-07-28-nlp-embedding/bert_input.png)
+
+
+
+
+
+[TODO] 
+
+- [ ] BERT大致结构，输入输出流程，抽象成公式计算
+- [ ] 它为什么在semantic-similarity上表现不如S-BERT，它的设计为什么导致了它做semantic-similarity比S-BERT慢很多。
+- [ ] 简介S-BERT的训练目标，和普通BERT有什么区别，得到了怎样的优势。
+- [ ] 重做Word2Vec插图，更改标识，标明embedding layer的位置。
 
 ## Evaulation Metrics
 
