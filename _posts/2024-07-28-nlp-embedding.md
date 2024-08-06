@@ -45,7 +45,9 @@ Word2Vec来自于2013年谷歌研究团队的一篇paper: [“Efficient Estimati
 
 ![](../assets/img/2024-07-28-nlp-embedding/word2vec-demo.png)
 
-利用Word2Vec得到word embedding向量的过程非常简单：将代表某个单词的one-hot向量
+利用Word2Vec得到word embedding向量的过程非常简单，仅仅是做一个 矩阵与向量的乘法 操作：
+
+将代表某个单词的one-hot向量
 $$
 {\vec {i}}_{[v \times 1]}
 $$
@@ -72,7 +74,10 @@ $$
 {\vec {e}}_{[h \times 1]} = \mathbf{W}_{[h \times v]} \cdot {\vec {i}}_{[v \times 1]}\\
 $$
 
-你或许已经发现，**使用一个矩阵对一个one-hot向量进行线性变换，等同于抽取出该矩阵的一列，抽取的列的序号，正是one-hot向量中，元素1所在的行索引值**。这不仅省去了大量的与0元素相乘的冗余的计算，也能够将输入从一个高维的one-hot向量简化成单词在字典中的整数索引，这正是当前PyTorch或者其他流行的深度学习框架中，nn.Embedding layer的基本实现原理。
+你或许已经发现，**使用一个矩阵对一个one-hot向量进行线性变换，等同于抽取出该矩阵的一列，抽取的列的序号，正是one-hot向量中，元素1所在的行索引值**。
+
+这不仅省去了大量的与0元素相乘的冗余的计算，也能够将输入从一个高维的one-hot向量简化成单词在字典中的整数索引，这正是当前PyTorch或者其他流行的深度学习框架中，nn.Embedding layer的基本实现原理。
+
 
 $$
 \left[
@@ -104,6 +109,8 @@ w_{h1} & w_{h2} & ... & w_{hv} \\
 \end{matrix}
 \right]
 $$
+
+
 
 接下来值得思考的问题便是：矩阵
 $$
