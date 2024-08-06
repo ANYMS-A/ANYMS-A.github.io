@@ -173,18 +173,44 @@ $$
 后续我们将以S-BERT模型作为我们解析的用例模型。
 
 ### BERT架构简介
-
 BERT是encoder-only的Transformer架构，在此为了理解方便，不会深扒Transformer的细节，而是从宏观，抽象的“输入和输出分别是什么”来对BERT进行介绍。
 
+#### BERT的输入：
+通常是 一对句子 ，假设为句子A和句子B。（也可以是一个单句）。句子们经过分词器（Tokenizer）后，变为了一个个的token，为了方便理解，可以暂时将一个token看作是一个单词。假设句子A分词后包含N个单词，句子B分词后包含
+M个单词。此外在每对句子的开头，会填充一个特殊的 [CLS] token，在句子的分隔处个结束处，也会填充一个特殊的 [SEP] token。因此我们会得到M+N+3个token。
+前面我们提到过，单词首先会被表示为它在词典中的索引（index）或者是one-hot向量，这是由文本到数字表示的第一步。下面公式中的W即代表的是token/单词在词典中的索引值。
+
+$$
+{S_{A}, S_{B}} \rightarrow Tokenizer \rightarrow {W_{[CLS]} \space , W_{A_{1}}, W_{A_{2}},...,W_{A_{N}}, \space , W_{[SEP]}, \space , W_{B_{1}}, W_{B_{2}},...,W_{B_{M}}, \space W_{[SEP]}}
+$$
+
+这些单词在正式输入到transformer的网络层前，还会进行一些预处理：
+- 将每个单词的索引值，输入到一个word-embedding layer中（前面提到的Word2Vec），根据索引值，抽取word-embedding矩阵的一列，得到每个单词的word-embedding/token-embedding向量，表示该单词在语料库分布中的语义。
+- 为每个单词赋予一个，segment-embedding向量，这个向量用来代表该单词它属于句子A还是句子B。
+- 为每个单词赋予一个，position-embedding向量，这个向量用来表示每个单词在整个句子中的位置信息。
+上述提到的三种向量，均拥有相同的维度，因此它们三个可以被相加，它们相加后，形成了最终transformer模型的输入。此处，我们得到了 M+N+3 个向量作为输入。
 ![](../assets/img/2024-07-28-nlp-embedding/bert_input.png)
 
+#### BERT的输出：
+BERT的输出形式非常简单，作为encoder-only的transformer，接收X个向量作为输入，就会输出X个向量。在上面提到的例子中，它会输出 M+N+3 个向量。注意，此处输出的X个向量的维度，可能和输入向量的维度不同。
 
+由于Transformer的Attention机制的缘故，输出的每个向量，都融合了整个句子的上下文信息（context）。此处不对Attention计算的细节做深度描述，**只需要记住，Attention的运算机制使得BERT输出的每个向量，都融合了整个句子的上下文信息。(可以参考下图中的那些箭头，就是在描述Attention捕捉并融合整个句子上下文信息的过程。)**。
 
+通常，**我们把BERT输出的向量成为 隐向量 （Hidden Vector/Latent Vector）**，因为我们认为神经网络模型将输入的向量映射到了一个新的向量空间，被称为 **隐空间 （Latent Space）。**
 
+$$
+{W_{[CLS]} \space , W_{A_{1}}, W_{A_{2}},...,W_{A_{N}}, \space , W_{[SEP]}, \space , W_{B_{1}}, W_{B_{2}},...,W_{B_{M}}, \space W_{[SEP]}} \rightarrow BERT \rightarrow {H_{[CLS]} \space , H_{A_{1}}, H_{A_{2}},...,H_{A_{N}}, \space , H_{[SEP]}, \space , H_{B_{1}}, H_{B_{2}},...,H_{B_{M}}, \space H_{[SEP]}}
+$$
+
+#### 思考：
+既然BERT输出的每个 隐向量（H） 都融合了句子的上下文信息，那么可不可以用某一个隐向量作为表示整个句子语义的sentence-embedding呢？再或者，我把这些个隐向量求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding呢？
+
+**答案是，可以！** 也有人这么试过，BERT诞生的初期，有人以[CLS] token所对应输出的隐向量$H_{[CLS]}$作为sentence-embedding。但是，BERT在做 句子语义表示的任务 上没有被青睐，一是BERT做语义相似度计算的效率不高，二是效果不好。至于原因，我们接着往下看。
+
+### 从BERT到Sentence-BERT
 
 [TODO] 
-
-- [ ] BERT大致结构，输入输出流程，抽象成公式计算
+- [ ] 添加BERT前向计算的示意图/attention箭头图
 - [ ] 它为什么在semantic-similarity上表现不如S-BERT，它的设计为什么导致了它做semantic-similarity比S-BERT慢很多。
 - [ ] 简介S-BERT的训练目标，和普通BERT有什么区别，得到了怎样的优势。
 - [ ] 重做Word2Vec插图，更改标识，标明embedding layer的位置。
