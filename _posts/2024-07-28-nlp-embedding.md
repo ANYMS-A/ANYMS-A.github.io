@@ -181,7 +181,7 @@ M个单词。此外在每对句子的开头，会填充一个特殊的 [CLS] tok
 前面我们提到过，单词首先会被表示为它在词典中的索引（index）或者是one-hot向量，这是由文本到数字表示的第一步。下面公式中的W即代表的是token/单词在词典中的索引值。
 
 $$
-{S_{A}, S_{B}} \rightarrow Tokenizer \rightarrow {W_{[CLS]} \space , W_{A_{1}}, W_{A_{2}},...,W_{A_{N}}, \space , W_{[SEP]}, \space , W_{B_{1}}, W_{B_{2}},...,W_{B_{M}}, \space W_{[SEP]}}
+[S_{A}, S_{B}] \rightarrow Tokenizer \rightarrow [W_{[CLS]}, W_{A_{1}}, W_{A_{2}},...,W_{A_{N}}, \space W_{[SEP]}, \space W_{B_{1}}, W_{B_{2}},...,W_{B_{M}}, W_{[SEP]}]
 $$
 
 这些单词在正式输入到transformer的网络层前，还会进行一些预处理：
@@ -199,7 +199,7 @@ BERT的输出形式非常简单，作为encoder-only的transformer，接收X个�
 通常，**我们把BERT输出的向量成为 隐向量 （Hidden Vector/Latent Vector）**，因为我们认为神经网络模型将输入的向量映射到了一个新的向量空间，被称为 **隐空间 （Latent Space）。**
 
 $$
-{W_{[CLS]} \space , W_{A_{1}}, W_{A_{2}},...,W_{A_{N}}, \space , W_{[SEP]}, \space , W_{B_{1}}, W_{B_{2}},...,W_{B_{M}}, \space W_{[SEP]}} \rightarrow BERT \rightarrow {H_{[CLS]} \space , H_{A_{1}}, H_{A_{2}},...,H_{A_{N}}, \space , H_{[SEP]}, \space , H_{B_{1}}, H_{B_{2}},...,H_{B_{M}}, \space H_{[SEP]}}
+[W_{[CLS]}, W_{A_{1}},...,W_{A_{N}}, W_{[SEP]}, W_{B_{1}},...,W_{B_{M}}, W_{[SEP]}] \rightarrow BERT \rightarrow [H_{[CLS]}, H_{A_{1}},...,H_{A_{N}}, H_{[SEP]}, H_{B_{1}},...,H_{B_{M}}, H_{[SEP]}]
 $$
 
 #### 思考：
