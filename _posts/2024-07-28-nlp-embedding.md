@@ -43,6 +43,8 @@ Word Embedding可被看作一种映射（mapping）：将单词（word）看作�
 
 Word2Vec来自于2013年谷歌研究团队的一篇paper: [“Efficient Estimation of Word Representations in Vector Space”](https://arxiv.org/abs/1301.3781)。它旨在通过从大型文本语料库中学习来捕捉单词之间的语义关系（单词的相似度）。
 
+![](../assets/img/2024-07-28-nlp-embedding/word2vec-demo.png)
+
 利用Word2Vec得到word embedding向量的过程非常简单：将代表某个单词的one-hot向量
 $$
 {\vec {i}}_{[v \times 1]}
@@ -113,17 +115,17 @@ $$
 在Word2Vec的paper中，主要提出了两种相似却略有不同的训练方式：
 - CBOW（ Continuous Bag of Words）
 - Skip-Gram
-![](../assets/img/2024-07-28-nlp-embedding/cbow-and-skip-gram.png)
-简单来讲，CBOW会训练一个简单的两层MLP进行分类任务，它以一个中心单词周围的几个词（$${\vec {i}}_{t-2}, {\vec {i}}_{t-1}, {\vec {i}}_{t+1}, {\vec {i}}_{t+2}$$）作为输入，预测该中心单词（$${\vec {i}}_{t}$$）。作为输入的one-hot向量们，经由同一个Linear层（这个层就是前面提到的word embedding时用的矩阵）的映射后，求和，再由另一个Linear层（该层最后会被抛弃不用)映射回和one-hot向量相同的维度，最后进行softmax转化为概率分布，最后进行交叉熵计算loss。
+![](../assets/img/2024-07-28-nlp-embedding/word2vec.png)
+简单来讲，CBOW会训练一个简单的两层MLP进行分类任务，它以一个中心单词周围的几个词（$${\vec {i}}_{t-2}, {\vec {i}}_{t-1}, {\vec {i}}_{t+1}, {\vec {i}}_{t+2}$$）作为输入，预测该中心单词（$${\vec {i}}_{t}$$)。作为输入的one-hot向量们，经由同一个Linear Encoder的映射后，求和，再由另一个Linear Decoder映射回和one-hot向量相同的维度，最后进行softmax转化为概率分布，最后进行交叉熵计算loss。
 
 相反的，Skip-Gram是以中心词作为输入，预测它周围的几个词。
 
-当训练收敛后，我们取两层MLP中的第一层（即对输入的one-hot进行线性映射的那一层），便得到了一个能够进行词嵌入的embedding layer。
+当训练收敛后，我们移除Decoder（图中粉色的部分），保留Encoder（图中绿色的部分）便得到了一个能够进行词嵌入的embedding layer，前面提到的用于做embedding映射的矩阵，便是该Encoder的权重矩阵（weight matrix）。
 
 ### Word Embedding的优缺点
 优点1: 当时的语言模型在进行训练前，常常会先用CBOW对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
 
-优点2：Word Embedding向量为单词提供了语义表征（semantics representation），**即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。** 这是使用one-hot表示无法做到的。
+优点2：Word Embedding向量为单词提供了语义表征（semantics representation），即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。这是使用one-hot表示无法做到的。
 
 
 $$
@@ -136,13 +138,16 @@ Similarity_{Cos_1} = \frac{\vec{cat} \cdot \vec{kitty}} {\Vert \vec{cat} \Vert \
 Similarity_{Cos_2} = \frac{\vec{cat} \cdot \vec{apple}} {\Vert \vec{cat} \Vert \times \Vert \vec{apple} \Vert} = -0.02 \\
 $$
 
-优点3：一个有趣的现象为，Word Embedding向量为单词间提供了“算术运算”的可能性。
+优点3：一个有趣的现象为，Word Embedding向量为单词间提供了“算术运算”的可能性。这也是word embedding能够进行语义表征的直接体现。
 
 $$
 {\vec {King}} - {\vec {Man}} + {\vec {Woman}} \approx {\vec {Queen}}
 $$
 
+![](../assets/img/2024-07-28-nlp-embedding/vec_math.png)
+
 缺点：Word2Vec是根据整体语料库中单词的分布来捕获到单词间的语义，然而同一个单词在不同的句子的 上下文（context）中，会有不同的意思， 例如：
+
 - "bank of the river" (此处的bank代表着 河床 的意思)
 - "I access my bank account" (此处的bank代表着 银行 的意思)
 
@@ -173,18 +178,27 @@ $$
 后续我们将以S-BERT模型作为我们解析的用例模型。
 
 ### BERT架构简介
+
+![](../assets/img/2024-07-28-nlp-embedding/bert_arch_1.png)
+
 BERT是encoder-only的Transformer架构，在此为了理解方便，不会深扒Transformer的细节，而是从宏观，抽象的“输入和输出分别是什么”来对BERT进行介绍。
 
 #### BERT的输入：
-通常是 一对句子 ，假设为句子A和句子B。（也可以是一个单句）。句子们经过分词器（Tokenizer）后，变为了一个个的token，为了方便理解，可以暂时将一个token看作是一个单词。假设句子A分词后包含N个单词，句子B分词后包含
-M个单词。此外在每对句子的开头，会填充一个特殊的 [CLS] token，在句子的分隔处个结束处，也会填充一个特殊的 [SEP] token。因此我们会得到M+N+3个token。
+通常是 一对句子 ，假设为句子A和句子B。（也可以是一个单句）。句子们经过分词器（Tokenizer）后，变为了一个个的token，为了方便理解，可以暂时将一个token看作是一个单词。
+
+假设句子A分词后包含N个单词，句子B分词后包含M个单词。此外在每对句子的开头，会填充一个特殊的 [CLS] token，在句子的分隔处个结束处，也会填充一个特殊的 [SEP] token，因此我们会得到M+N+3个token。
+
 前面我们提到过，单词首先会被表示为它在词典中的索引（index）或者是one-hot向量，这是由文本到数字表示的第一步。下面公式中的W即代表的是token/单词在词典中的索引值。
 
+
 $$
-[S_{A}, S_{B}] \rightarrow Tokenizer \rightarrow [W_{[CLS]}, W_{A_{1}}, W_{A_{2}},...,W_{A_{N}}, \space W_{[SEP]}, \space W_{B_{1}}, W_{B_{2}},...,W_{B_{M}}, W_{[SEP]}]
+\scriptsize{[S_{A}, S_{B}]} \rightarrow \textbf{Tokenizer} \rightarrow \scriptsize{[W_{[CLS]}, W_{A_{1}}, W_{A_{2}},...,W_{A_{N}}, \space W_{[SEP]}, \space W_{B_{1}}, W_{B_{2}},...,W_{B_{M}}, W_{[SEP]}]}
 $$
 
-这些单词在正式输入到transformer的网络层前，还会进行一些预处理：
+
+
+这些 单词 / token 在正式输入到transformer的encoding layer前，还会被一些预处理层进行转换：
+
 - 将每个单词的索引值，输入到一个word-embedding layer中（前面提到的Word2Vec），根据索引值，抽取word-embedding矩阵的一列，得到每个单词的word-embedding/token-embedding向量，表示该单词在语料库分布中的语义。
 - 为每个单词赋予一个，segment-embedding向量，这个向量用来代表该单词它属于句子A还是句子B。
 - 为每个单词赋予一个，position-embedding向量，这个向量用来表示每个单词在整个句子中的位置信息。
@@ -194,15 +208,21 @@ $$
 #### BERT的输出：
 BERT的输出形式非常简单，作为encoder-only的transformer，接收X个向量作为输入，就会输出X个向量。在上面提到的例子中，它会输出 M+N+3 个向量。注意，此处输出的X个向量的维度，可能和输入向量的维度不同。
 
-由于Transformer的Attention机制的缘故，输出的每个向量，都融合了整个句子的上下文信息（context）。此处不对Attention计算的细节做深度描述，**只需要记住，Attention的运算机制使得BERT输出的每个向量，都融合了整个句子的上下文信息。(可以参考下图中的那些箭头，就是在描述Attention捕捉并融合整个句子上下文信息的过程。)**。
+由于Transformer的Attention机制的缘故，输出的每个向量，都融合了整个句子的上下文信息（context）。此处不对Attention计算的细节做深度描述。
+
+总之，Attention的运算机制使得BERT输出的每个向量，都融合了整个句子的上下文信息。(可以参考下图中的那些箭头，就是在描述Attention捕捉并融合整个句子上下文信息的过程。)。
 
 通常，**我们把BERT输出的向量成为 隐向量 （Hidden Vector/Latent Vector）**，因为我们认为神经网络模型将输入的向量映射到了一个新的向量空间，被称为 **隐空间 （Latent Space）。**
 
+
 $$
-[W_{[CLS]}, W_{A_{1}},...,W_{A_{N}}, W_{[SEP]}, W_{B_{1}},...,W_{B_{M}}, W_{[SEP]}] \rightarrow BERT \rightarrow [H_{[CLS]}, H_{A_{1}},...,H_{A_{N}}, H_{[SEP]}, H_{B_{1}},...,H_{B_{M}}, H_{[SEP]}]
+\scriptsize{[W_{[CLS]}, W_{A_{1}},...,W_{A_{N}}, W_{[SEP]}, W_{B_{1}},...,W_{B_{M}}, W_{[SEP]}]} \rightarrow \textbf{BERT} \rightarrow \scriptsize{[H_{[CLS]}, H_{A_{1}},...,H_{A_{N}}, H_{[SEP]}, H_{B_{1}},...,H_{B_{M}}, H_{[SEP]}]}
 $$
 
+
+
 #### 思考：
+
 既然BERT输出的每个 隐向量（H） 都融合了句子的上下文信息，那么可不可以用某一个隐向量作为表示整个句子语义的sentence-embedding呢？再或者，我把这些个隐向量求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding呢？
 
 **答案是，可以！** 也有人这么试过，BERT诞生的初期，有人以[CLS] token所对应输出的隐向量$H_{[CLS]}$作为sentence-embedding。但是，BERT在做 句子语义表示的任务 上没有被青睐，一是BERT做语义相似度计算的效率不高，二是效果不好。至于原因，我们接着往下看。
@@ -213,7 +233,7 @@ $$
 - [ ] 添加BERT前向计算的示意图/attention箭头图
 - [ ] 它为什么在semantic-similarity上表现不如S-BERT，它的设计为什么导致了它做semantic-similarity比S-BERT慢很多。
 - [ ] 简介S-BERT的训练目标，和普通BERT有什么区别，得到了怎样的优势。
-- [ ] 重做Word2Vec插图，更改标识，标明embedding layer的位置。
+- [ ] 添加Sentence Embedding示意图
 
 ## Evaulation Metrics
 
