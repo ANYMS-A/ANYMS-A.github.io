@@ -123,7 +123,7 @@ $$
 ### Word Embedding的优缺点
 优点1: 当时的语言模型在进行训练前，常常会先用CBOW对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
 
-优点2：Word Embedding向量为单词提供了语义（semantics），**即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。** 这是使用one-hot表示无法做到的。
+优点2：Word Embedding向量为单词提供了语义表征（semantics representation），**即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。** 这是使用one-hot表示无法做到的。
 
 
 $$
