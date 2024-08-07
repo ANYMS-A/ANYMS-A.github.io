@@ -262,7 +262,10 @@ $$
   	BERT的训练没有加入专门的 损失函数/目标函数（loss/objective function）来提升sentence embedding vector的语义表示效果。
   
 #### Sentence-BERT(S-BERT)
-类似前文提到的，Sentence-BERT 将模型输出的 隐向量（$$[{\vec{H}}_{0}, {\vec{H}}_{1}, ...,{\vec{H}}_{n}]$$）求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding。这个求均值的操作，在模型中一个叫做"Pooling"的层中被执行。
+
+![](../assets/img/2024-07-28-nlp-embedding/s-bert-arch.png)
+
+类似前文提到的，Sentence-BERT 将模型输出的 隐向量（$$[{\vec{H}}_{0}, {\vec{H}}_{1}, ...,{\vec{H}}_{n}]$$）求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding。这个求均值的操作，在模型中一个叫做"pooling"的层中被执行。
 
 Sentence-BERT的 网络结构 和 输入形式 使得模型可以预先计算和存储句子的嵌入表示（embedding vector）。当需要计算两个句子的相似度时，只需比较它们的嵌入向量即可，大大减少了计算开销。
 
