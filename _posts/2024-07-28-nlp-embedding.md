@@ -248,11 +248,11 @@ $$
   	BERT的训练没有加入专门的 损失函数/目标函数（loss/objective function）来提升sentence embedding vector的语义表示效果。
   
 #### Sentence-BERT(S-BERT)
-类似前文提到的，Sentence-BERT 将模型输出的 隐向量（H）求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding。这个求均值的操作，在模型中一个叫做"Pooling"的层中被执行。
+类似前文提到的，Sentence-BERT 将模型输出的 隐向量（$[{\vec{H}}_{0}, {\vec{H}}_{1}, ...,{\vec{H}}_{n}]$）求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding。这个求均值的操作，在模型中一个叫做"Pooling"的层中被执行。
 
-Sentence-BERT的 网络架构 以及 训练方式 使得模型可以预先计算和存储句子的嵌入表示（embedding vector）。当需要计算两个句子的相似度时，只需比较它们的嵌入向量即可，大大减少了计算开销。
+Sentence-BERT的 网络结构 和 输入形式 使得模型可以预先计算和存储句子的嵌入表示（embedding vector）。当需要计算两个句子的相似度时，只需比较它们的嵌入向量即可，大大减少了计算开销。
 
-此外，为了提升语义表示的能力，S-BERT在训练中加入了特定的 损失函数，所以接下来，我们将进一步深究 S-BERT 是如何被训练出来的。
+此外，为了提升语义表示的能力，S-BERT在训练中加入了特定的训练数据，并针对地设计了相应的 损失函数。所以接下来，我们将进一步深究 S-BERT 是如何被训练出来的。
 
 ### S-BERT的训练
 #### 分类损失
@@ -270,21 +270,42 @@ Sentence-BERT的 网络架构 以及 训练方式 使得模型可以预先计算
 Triplet Loss可以很好的 “推远不同语义的sentence embedding之间的距离，拉近相似语义的sentence embedding的距离。” 曾广泛的使用于人脸识别任务中。
 
 数据组成：
-- 输入：三个句子组成的三元组（锚点句Anchor, 正样本Positive, 负样本Negative）。Anchor和Positive有相似的语义，而Anchor和Negative有相反或无关的语义。
+- 输入：三个句子组成的三元组（锚点样本Anchor, 正样本Positive, 负样本Negative）。Anchor和Positive有相似的语义，而Anchor和Negative有相反或无关的语义。
 
 训练步骤：
 1. 将三个句子对(A, P, N) 通过共享参数（同样参数）的BERT编码器生成各自的句子嵌入向量$${\vec{a}}_{[h \times 1]}$$和$${\vec{p}}_{[h \times 1]}$$和$${\vec{n}}_{[h \times 1]}$$。
-2. 直接使用三个句子的嵌入向量计算Triplet Loss损失, 最后根据损失求梯度，并更新参数，公式如下。
+2. 直接使用三个句子的嵌入向量计算Triplet Loss损失, 最后根据损失求梯度，并更新模型参数$\theta$，公式如下。
 
 $$
 TripletLoss = \mathop{\arg\min}\limits_{\theta}({\max{(0, \Vert \vec{a} - \vec{p} \Vert - \Vert \vec{a} - \vec{n} \Vert + margin)}})
 $$
 
+形象的看，三元组损失的优化目标为：
+
+使 锚点样本Anchor 与 正样本Positive 之间的距离 小于 锚点样本Anchor 与  负样本Negative 之间的距离。如果这个距离的差值超过了一个人为设置的距离限制（margin）,那便不再继续优化（惩罚）模型，防止过拟合。
+
+### S-BERT总结
+总体看来， 相比于BERT：
+- S-BERT更改了输入的形式以及网络结构，使得句子嵌入向量的相似度的计算效率提升很多。
+- 针对语义表示性能提升设计的 训练数据集 以及 损失函数 使得句子语义表示的能力得到提升。
+
+## 从sentence-embedding到向量数据库
+当训练好了一个sentence transformer后，我们便能使用它来为我们构建向量数据库了。大致的步骤为：
+
+1. 切分文本语料为多个chunk。
+2. 将每个chunk输入到我们训练好的 sentence transformer中（例如S-BERT），得到每个chunk的embedding向量。
+3. 将所有的chunk的embedding向量存储到数据库中。
+
+至此，我们便得到了一个向量数据库！
+
 [TODO] 
-- [ ] 添加BERT前向计算的示意图/attention箭头图
-- [ ] 它为什么在semantic-similarity上表现不如S-BERT，它的设计为什么导致了它做semantic-similarity比S-BERT慢很多。
-- [ ] 简介S-BERT的训练目标，和普通BERT有什么区别，得到了怎样的优势。
-- [ ] 添加Sentence Embedding示意图
+- [ ] 更新one-hot 以及 word-embedding示意图。
+- [ ] 添加BERT前向计算的示意图/attention箭头图。
+- [ ] BERT vs S-BERT结构对比图。
+- [ ] 添加Sentence Embedding示意图。
+- [ ] 三元组loss的示意图。
+- [ ] sentence transformer 构建 vector DB的示意图。
+
 
 ## Evaulation Metrics
 
