@@ -24,7 +24,7 @@ image: 2024-07-28-nlp-embedding/cover.jpeg
 
 最初，单词被表示为它在一个词典中的索引（index）。比如一个语料库中一共有1000个单词，"language"这个单词在词典中排第200个，那么它可以被表示为一个独热向量（one-hot vector），即一个维度为1000，其第200个元素的值为1，其它所有元素均为0的向量。one-hot编码的特点是：简单，高维度，稀疏，离散，维度由词典大小决定，单词间的表示无相似性度量（无语义）。
 
-![](../assets/img/2024-07-28-nlp-embedding/one-hot-encoding2.png)
+![](../assets/img/2024-07-28-nlp-embedding/one-hot.png)
 
 ### 什么是词嵌入（Word Embedding）
 
@@ -42,6 +42,8 @@ Word Embedding可被看作一种映射（mapping）：将单词（word）看作�
 ### Word2Vec
 
 Word2Vec来自于2013年谷歌研究团队的一篇paper: [“Efficient Estimation of Word Representations in Vector Space”](https://arxiv.org/abs/1301.3781)。它旨在通过从大型文本语料库中学习来捕捉单词之间的语义关系（单词的相似度）。
+
+有趣的是，该paper当年被顶会ICLR 2013拒了，但目前该paper的引用量已有4万多。
 
 ![](../assets/img/2024-07-28-nlp-embedding/word2vec-demo.png)
 
@@ -130,7 +132,10 @@ $$
 当训练收敛后，我们移除Decoder（图中粉色的部分），保留Encoder（图中绿色的部分）便得到了一个能够进行词嵌入的embedding layer，前面提到的用于做embedding映射的矩阵，便是该Encoder的权重矩阵（weight matrix）。
 
 ### Word Embedding的优缺点
-优点1: 当时的语言模型在进行训练前，常常会先用CBOW对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
+
+优点1: 当时的语言模型在进行训练前，常常会先用Word2Vec的方式对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
+
+![](../assets/img/2024-07-28-nlp-embedding/vec-math.png)
 
 优点2：Word Embedding向量为单词提供了语义表征（semantics representation），即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。这是使用one-hot表示无法做到的。
 
@@ -151,7 +156,7 @@ $$
 {\vec {King}} - {\vec {Man}} + {\vec {Woman}} \approx {\vec {Queen}}
 $$
 
-![](../assets/img/2024-07-28-nlp-embedding/vec_math.png)
+
 
 缺点：Word2Vec是根据整体语料库中单词的分布来捕获到单词间的语义，然而同一个单词在不同的句子的 上下文（context）中，会有不同的意思， 例如：
 
@@ -213,6 +218,9 @@ $$
 ![](../assets/img/2024-07-28-nlp-embedding/bert_input.png)
 
 #### BERT的输出：
+
+![](../assets/img/2024-07-28-nlp-embedding/bert-forward.png)
+
 BERT的输出形式非常简单，作为encoder-only的transformer，接收X个向量作为输入，就会输出X个向量。在上面提到的例子中，它会输出 M+N+3 个向量。注意，此处输出的X个向量的维度，可能和输入向量的维度不同。
 
 由于Transformer的Attention机制的缘故，输出的每个向量，都融合了整个句子的上下文信息（context）。此处不对Attention计算的细节做深度描述。
@@ -231,6 +239,8 @@ $$
 #### 思考：
 对于句子嵌入问题（sentence embedding）我们的目的是：给定一个句子/一段文本，用一个固定维度的向量表示这段文本的语义。
 
+![](../assets/img/2024-07-28-nlp-embedding/sentence-embed.png)
+
 现在，得益于Attention，BERT输出的每个 隐向量（${\vec{H}}_{[h \times 1]}$） 都融合了句子的上下文信息，那么可不可以用某一个 输出的隐向量 作为表示整个句子语义的sentence-embedding呢？再或者，我把这些个隐向量求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding呢？
 
 **答案是，可以！并且后面要介绍的 Sentence-BERT 就是沿着这个思路走的！**
@@ -239,7 +249,9 @@ $$
 
 ### 从BERT到Sentence-BERT
 
-#### BERT在 semantic textual similarity 的缺陷
+![](../assets/img/2024-07-28-nlp-embedding/bert_vs_sbert.png)
+
+#### BERT在 semantic textual similarity 任务上的缺陷
 - 计算效率低下：
 	BERT在计算两个句子的相似度时，需要将两个句子拼接后输入给模型。
 
@@ -280,6 +292,8 @@ $$
 TripletLoss = \mathop{\arg\min}\limits_{\theta}({\max{(0, \Vert \vec{a} - \vec{p} \Vert - \Vert \vec{a} - \vec{n} \Vert + margin)}})
 $$
 
+![](../assets/img/2024-07-28-nlp-embedding/triplet-loss.png)
+
 形象的看，三元组损失的优化目标为：
 
 使 锚点样本Anchor 与 正样本Positive 之间的距离 小于 锚点样本Anchor 与  负样本Negative 之间的距离。如果这个距离的差值超过了一个人为设置的距离限制（margin）,那便不再继续优化（惩罚）模型，防止过拟合。
@@ -298,13 +312,11 @@ $$
 
 至此，我们便得到了一个向量数据库！
 
+![](../assets/img/2024-07-28-nlp-embedding/vector-db.png)
+
 [TODO] 
-- [ ] 更新one-hot 以及 word-embedding示意图。
-- [ ] 添加BERT前向计算的示意图/attention箭头图。
-- [ ] BERT vs S-BERT结构对比图。
-- [ ] 添加Sentence Embedding示意图。
+
 - [ ] 三元组loss的示意图。
-- [ ] sentence transformer 构建 vector DB的示意图。
 
 
 ## Evaulation Metrics
