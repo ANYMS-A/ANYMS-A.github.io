@@ -169,6 +169,8 @@ $$
 
 上面的介绍中，我们知道了如何将句子中的每一个单词表示为一个embedding向量，但是熟悉 RAG/向量数据库 的同学们或许知道，向量数据库中的一条向量往往代表着一个完整的句子或者一大段文本，句子或文本段落有长有短，它们又是如何被表示成一个个具有相同维度的embedding向量的呢？
 
+![](../assets/img/2024-07-28-nlp-embedding/sentence-embed.png)
+
 最简单的，我们可以对句子中所有的单词的embedding向量求均值（average word embedding），这样我们也能得到关于一个句子的sentence embedding向量。
 $$
 \vec{S} = (\vec{w_{1}} + \vec{w_{2}} + \space ... + \space \vec{w_{n}}) / n
@@ -260,7 +262,7 @@ $$
   	BERT的训练没有加入专门的 损失函数/目标函数（loss/objective function）来提升sentence embedding vector的语义表示效果。
   
 #### Sentence-BERT(S-BERT)
-类似前文提到的，Sentence-BERT 将模型输出的 隐向量（$[{\vec{H}}_{0}, {\vec{H}}_{1}, ...,{\vec{H}}_{n}]$）求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding。这个求均值的操作，在模型中一个叫做"Pooling"的层中被执行。
+类似前文提到的，Sentence-BERT 将模型输出的 隐向量（$$[{\vec{H}}_{0}, {\vec{H}}_{1}, ...,{\vec{H}}_{n}]$$）求一个均值，把这个均值向量作为作为表示整个句子语义的sentence-embedding。这个求均值的操作，在模型中一个叫做"Pooling"的层中被执行。
 
 Sentence-BERT的 网络结构 和 输入形式 使得模型可以预先计算和存储句子的嵌入表示（embedding vector）。当需要计算两个句子的相似度时，只需比较它们的嵌入向量即可，大大减少了计算开销。
 
