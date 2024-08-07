@@ -259,10 +259,26 @@ Sentence-BERT的 网络架构 以及 训练方式 使得模型可以预先计算
 数据组成：
 - 输入：两个句子（A,B）组成的句子对（sentence pair）
 - 标签：三分类标签，表示句子对中的两个句子的语义关系是：蕴涵[0]、矛盾[1]、中性[2]。
+
 训练步骤：
 1. 将两个句子对 (A, B) 通过共享参数（同样参数）的BERT编码器生成各自的句子嵌入$${\vec{u}}_{[h \times 1]}$$和$${\vec{v}}_{[h \times 1]}$$。
 2. 将这两个嵌入向量以及它们的 差值 拼接起来，形成一个特征向量$${\vec{z}}_{[3h \times 1]}$$，其中$$\vec{z} = concat([\vec{u}, \vec{v}, \lvert \vec{u} - \vec{v} \rvert])$$。
 3. 将特征向量$${\vec{z}}_{[3h \times 1]}$$输入一个Linear层，即令向量$${\vec{z}}_{[3h \times 1]}$$乘上一个矩阵$${\mathbf{W}}_{[3 \times 3h]}$$，得到分类用的输出向量$${\vec{y^{'}}}_{[3 \times 1]}$$。
+4. 计算$${\vec{y^{'}}}_{[3 \times 1]}$$ 与类别标签 $$\vec{y}$$ 的交叉熵 $$\textbf{CrossEntropy}(\vec{y}, \vec{y^{'})$$，最后根据交叉熵求梯度，并更新参数。
+
+#### 三元组损失 (Triplet Loss)
+Triplet Loss可以很好的 “推远不同语义的sentence embedding之间的距离，拉近相似语义的sentence embedding的距离。” 曾广泛的使用于人脸识别任务中。
+
+数据组成：
+- 输入：三个句子组成的三元组（锚点句Anchor, 正样本Positive, 负样本Negative）。Anchor和Positive有相似的语义，而Anchor和Negative有相反或无关的语义。
+
+训练步骤：
+1. 将三个句子对(A, P, N) 通过共享参数（同样参数）的BERT编码器生成各自的句子嵌入向量$${\vec{a}}_{[h \times 1]}$$和$${\vec{p}}_{[h \times 1]}$$和$${\vec{n}}_{[h \times 1]}$$。
+2. 直接使用三个句子的嵌入向量计算Triplet Loss损失, 最后根据损失求梯度，并更新参数，公式如下。
+
+$$
+TripletLoss = \mathop{\arg\min}\limits_{\theta}{\max{0, \norm{\vec{a} - \vec{p}} - \norm{\vec{a} - \vec{n}} + margin}}
+$$
 
 [TODO] 
 - [ ] 添加BERT前向计算的示意图/attention箭头图
