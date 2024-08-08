@@ -135,12 +135,15 @@ $$
 
 ### Word Embedding的优缺点
 
-优点1: 当时的语言模型在进行训练前，常常会先用Word2Vec的方式对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
+**优点1：** 提升语言模型表现。
+
+当时的语言模型在进行训练前，常常会先用Word2Vec的方式对模型中的embedding-layer进行预训练，以预训练好的embedding layer的值作为初始值再进行后续其它任务的训练，这一过程被称为"pretraining-embedding"，它通常能够提升模型表现。
 
 ![](../assets/img/2024-07-28-nlp-embedding/vec-math.png)
 
-优点2：Word Embedding向量为单词提供了语义表征（semantics representation），即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。这是使用one-hot表示无法做到的。
+**优点2：** Word Embedding向量为单词提供了语义表征（semantics representation）。
 
+即意思相近的单词，在embedding后的h维的高维空间中会具有较为相近的欧几里得距离 或者 较高的余弦相似度。这是使用one-hot表示无法做到的。
 
 $$
 Distance_{Euc_1} = \sqrt[2] {(\vec{cat} - \vec{kitty})^{2}} = 0.1 \\
@@ -152,20 +155,21 @@ Similarity_{Cos_1} = \frac{\vec{cat} \cdot \vec{kitty}} {\Vert \vec{cat} \Vert \
 Similarity_{Cos_2} = \frac{\vec{cat} \cdot \vec{apple}} {\Vert \vec{cat} \Vert \times \Vert \vec{apple} \Vert} = -0.02 \\
 $$
 
-优点3：一个有趣的现象为，Word Embedding向量为单词间提供了“算术运算”的可能性。这也是word embedding能够进行语义表征的直接体现。
+**优点3：** Word Embedding向量为单词间提供了“算术运算”的可能性。这也是word embedding能够进行语义表征的直接体现。
 
 $$
 {\vec {King}} - {\vec {Man}} + {\vec {Woman}} \approx {\vec {Queen}}
 $$
 
 
+**缺点：** 无法区分同一个单词在不同上下文中代表的不同语义。
 
-缺点：Word2Vec是根据整体语料库中单词的分布来捕获到单词间的语义，然而同一个单词在不同的句子的 上下文（context）中，会有不同的意思， 例如：
+因为Word2Vec是根据 语料库中单词整体的分布 来捕获到单词间的语义，然而同一个单词在不同的句子的 上下文（context）中，会有不同的意思， 例如：
 
 - "bank of the river" (此处的bank代表着 河床 的意思)
 - "I access my bank account" (此处的bank代表着 银行 的意思)
 
-然而对于Word2Vec这样的"Context-Free"的模型，它针对这两句话中的bank都只能给出相同的表示，**这两个bank都对应着训练好的Embedding层矩阵中的同一列**。
+所以对于Word2Vec这样的"Context-Free"的模型，它针对这两句话中的bank都只能给出相同的表示，即：**这两个bank都对应着训练好的Embedding层矩阵中的同一列**。
 
 ## 句子嵌入(Sentence Embedding)简介
 
