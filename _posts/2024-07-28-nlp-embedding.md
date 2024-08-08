@@ -124,12 +124,16 @@ $$
 在Word2Vec的paper中，主要提出了两种相似却略有不同的训练方式：
 - CBOW（ Continuous Bag of Words）
 - Skip-Gram
+
 ![](../assets/img/2024-07-28-nlp-embedding/word2vec.png)
-简单来讲，CBOW会训练一个简单的两层MLP进行分类任务，它以一个中心单词周围的几个词（$${\vec {i}}_{t-2}, {\vec {i}}_{t-1}, {\vec {i}}_{t+1}, {\vec {i}}_{t+2}$$）作为输入，预测该中心单词（$${\vec {i}}_{t}$$)。作为输入的one-hot向量们，经由同一个Linear Encoder的映射后，求和，再由另一个Linear Decoder映射回和one-hot向量相同的维度，最后进行softmax转化为概率分布，最后进行交叉熵计算loss。
+
+简单来讲，CBOW会训练一个简单的两层MLP进行分类任务，它以一个中心单词周围的几个词（$${\vec {i}}_{t-2}, {\vec {i}}_{t-1}, {\vec {i}}_{t+1}, {\vec {i}}_{t+2}$$）作为输入，预测该中心单词（$${\vec {i}}_{t}$$)。
+
+作为输入的one-hot向量们，经由同一个Linear Encoder的映射后，求和，再由另一个Linear Decoder映射回和one-hot向量相同的维度，最后进行softmax转化为概率分布，最后进行交叉熵计算loss。
 
 相反的，Skip-Gram是以中心词作为输入，预测它周围的几个词。
 
-当训练收敛后，我们移除Decoder（图中粉色的部分），保留Encoder（图中绿色的部分）便得到了一个能够进行词嵌入的embedding layer，前面提到的用于做embedding映射的矩阵，便是该Encoder的权重矩阵（weight matrix）。
+当训练收敛后，我们 **移除Decoder（图中粉色的部分），保留Encoder（图中绿色的部分）** 便得到了一个能够进行词嵌入的embedding layer，前面提到的用于做embedding映射的矩阵，便是该Encoder的权重矩阵（weight matrix）。
 
 ### Word Embedding的优缺点
 
