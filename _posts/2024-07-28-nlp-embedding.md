@@ -342,3 +342,35 @@ $$
 至此，我们便得到了一个向量数据库！
 
 ![](../assets/img/2024-07-28-nlp-embedding/vector-db.png)
+
+## 样例代码
+[Sentence Transformers](https://sbert.net/)提供了非常方便和丰富的开源embedding模型，下面给出一个简单的代码示例：
+
+```python
+from sentence_transformers import SentenceTransformer
+import numpy as np
+
+model_path = r"D:\HF_Model\bge-large-zh-v1.5"
+st_transformer = SentenceTransformer(model_path)
+
+s0 = "我很爱吃苹果，它很好吃"
+s1 = "我喜欢苹果这种水果，它很香很甜"
+s2 = "苹果公司新推出了它的手机IPhone15"
+s3 = "网上冲浪是当前年轻人业余时间的娱乐活动"
+
+sentences = [s0, s1, s2, s3]
+embeddings = st_transformer.encode(sentences)
+print(f"Embedding向量维度: {embeddings[0].shape}")
+
+embeddings = [e.reshape(-1, 1) for e in embeddings]  # 转为2维向量方便计算点积
+print(f"s0, s1余弦相似度：{(embeddings[0].T @ embeddings[1]) / (np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1]))}")
+print(f"s0, s2余弦相似度：{(embeddings[0].T @ embeddings[2]) / (np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[2]))}")
+print(f"s0, s3余弦相似度：{(embeddings[0].T @ embeddings[3]) / (np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[3]))}")
+```
+output:
+```shell
+Embedding向量维度: (1024,)
+s0, s1余弦相似度：[[0.8625516]]
+s0, s2余弦相似度：[[0.50811756]]
+s0, s3余弦相似度：[[0.2678148]]
+```
