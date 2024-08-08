@@ -281,7 +281,11 @@ Sentence-BERT的 网络结构 和 输入形式 使得模型可以预先计算和
 1. 将两个句子对 (A, B) 通过共享参数（同样参数）的BERT编码器生成各自的句子嵌入$${\vec{u}}_{[h \times 1]}$$和$${\vec{v}}_{[h \times 1]}$$。
 2. 将这两个嵌入向量以及它们的 差值 拼接起来，形成一个特征向量$${\vec{z}}_{[3h \times 1]}$$，其中$$\vec{z} = concat([\vec{u}, \vec{v}, \lvert \vec{u} - \vec{v} \rvert])$$。
 3. 将特征向量$${\vec{z}}_{[3h \times 1]}$$输入一个Linear层，即令向量$${\vec{z}}_{[3h \times 1]}$$乘上一个矩阵$${\mathbf{W}}_{[3 \times 3h]}$$，得到分类用的输出向量$${\vec{y}}^{'}_{[3 \times 1]}$$。
-4. 计算$${\vec{y}}^{'}_{[3 \times 1]}$$ 与类别标签 $$y$$ 的交叉熵 $$\textbf{CrossEntropy}(y, {\vec{y}}^{'})$$，最后根据交叉熵求梯度，并更新参数。
+4. 计算$${\vec{y}}^{'}_{[3 \times 1]}$$ 与类别标签 $$y$$ 的交叉熵，最后根据交叉熵求梯度，并更新参数$$\theta$$。
+
+$$
+ClassifyLoss = \mathop{\arg\min}\limits_{\theta}(\textbf{CrossEntropy}(y, {\vec{y}}^{'}))
+$$
 
 #### 相似度损失
 数据组成：
@@ -294,7 +298,7 @@ Sentence-BERT的 网络结构 和 输入形式 使得模型可以预先计算和
 3. 计算$$S^{'}$$与$$S$$之间的mean-square error(MSE)作为损失，最后根据MSE求梯度，并更新模型参数$$\theta$$。
 
 $$
-SimLoss = \mathop{\arg\min}\limits_{\theta}({\vert S^{'} - S \vert}^2)
+SimLoss = \mathop{\arg\min}\limits_{\theta}(\frac{1}{N} \sum_{i=0}^{N} {\vert S^{'} - S \vert}^2)
 $$
 
 #### 三元组损失 (Triplet Loss)
